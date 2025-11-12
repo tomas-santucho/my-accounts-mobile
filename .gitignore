@@ -1,0 +1,73 @@
+# Node
+node_modules/
+npm-debug.*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+*.log
+
+# Expo
+.expo/
+.expo-shared/
+web-build/
+
+# Metro bundler
+.expo/
+dist/
+tmp/
+temp/
+*.tmp
+*.temp
+
+# React Native
+# Build artifacts
+android/app/build/
+ios/build/
+ios/Pods/
+*.keystore
+*.jks
+
+# Fastlane
+fastlane/report.xml
+fastlane/Preview.html
+fastlane/screenshots
+fastlane/test_output
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# JetBrains (IntelliJ / Android Studio)
+.idea/
+*.iml
+.gradle/
+local.properties
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+*.xcworkspace
+
+# VSCode
+.vscode/
+.history/
+
+# Environment
+.env
+.env.*.local
+
+# Cache
+.cache/
+.npm/
+.expo/
+expo-debug.log
+
+# Others
+*.orig
+*.patch
+*.bak
