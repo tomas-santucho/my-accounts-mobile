@@ -12,7 +12,7 @@ export const realmExpenseRepo = (): ExpenseRepository => ({
                 _id: new Realm.BSON.ObjectId(),
                 title: expense.title,
                 amount: expense.amount,
-                createdAt: expense.createdAt ?? new Date(),
+                date: expense.date ?? new Date(),
             })
         })
 
@@ -28,7 +28,7 @@ export const realmExpenseRepo = (): ExpenseRepository => ({
                 _id: r._id.toHexString(),
                 title: r.title,
                 amount: r.amount,
-                createdAt: new Date(r.createdAt),
+                date: new Date(r.date),
             }),
         )
 
@@ -49,7 +49,7 @@ export const realmExpenseRepo = (): ExpenseRepository => ({
             _id: obj._id.toHexString(),
             title: obj.title,
             amount: obj.amount,
-            createdAt: new Date(obj.createdAt),
+            date: new Date(obj.date),
         })
 
         realm.close()

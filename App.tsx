@@ -6,6 +6,8 @@ import {
   getExpenses,
   saveExpense,
 } from "./src/services/expenseService"
+import FinanceHeader from "./src/ui/lib/FinanceHeader";
+import FinanceSummaryScreen from "./src/ui/screens/FinanceSummaryScreen";
 
 export default function App() {
   const [expenses, setExpenses] = useState<Expense[]>([])
@@ -43,7 +45,7 @@ export default function App() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>💸 Expense Tracker</Text>
+      <FinanceSummaryScreen/>
 
       <TextInput
         placeholder="Expense name"

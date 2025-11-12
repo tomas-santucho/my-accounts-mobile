@@ -1,7 +1,8 @@
 import { Platform } from "react-native"
-import { apiClient } from "../data/apiClient"
+import { apiClient } from "../data/rest/apiClient"
 import { Expense, ExpenseSchema } from "../data/realm/schemas"
 import Realm from "../data/realm/realmWrapper"
+import {addExpense} from "../app/expense/addExpense";
 
 export type ExpenseInput = {
   title: string

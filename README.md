@@ -2,6 +2,12 @@
 
 A simple and intuitive mobile app to manage your personal accounts, built with React Native and Expo.
 
+## 🤔 About This Project
+
+This is a practice project for learning React Native, based on the book [React and React Native: Build cross-platform JavaScript and TypeScript apps for the web, desktop, and mobile 5th Edition](https://www.packtpub.com/en-us/product/react-and-react-native-9781805126874).
+
+The styles are mostly vibe coded cause i am a backend dev lmao.
+
 ## ✨ Features
 
 *   **Cross-platform:** Runs on both Android and iOS devices.
@@ -27,7 +33,7 @@ A simple and intuitive mobile app to manage your personal accounts, built with R
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/your-username/my-accounts-mobile.git
+    git clone https://github.com/tomas-santucho/my-accounts-mobile.git
     cd my-accounts-mobile
     ```
 
