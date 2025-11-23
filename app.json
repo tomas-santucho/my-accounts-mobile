@@ -27,6 +27,21 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a2d05329-5930-4e7c-a64e-56507831675d"
+      }
+    },
+    "plugins": [
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "my-accounts",
+          "organization": "my-accounts"
+        }
+      ]
+    ]
   }
 }

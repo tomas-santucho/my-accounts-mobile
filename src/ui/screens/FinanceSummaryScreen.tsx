@@ -1,35 +1,67 @@
-import React from 'react';
-import { View, ScrollView, StyleSheet } from 'react-native';
+import React, { useEffect, useState, useCallback } from 'react';
+import { View, ScrollView, StyleSheet, Modal } from 'react-native';
 import FinanceCard from '../lib/FinanceCard';
 import FinanceHeader from "../lib/FinanceHeader";
-import { MonthlyBudgetSummary } from "../lib/MonthlyBudgetSummary";
-
-console.log("MonthlyBudgetSummary:", MonthlyBudgetSummary);
+import MonthlyBudgetSummary from "../lib/MonthlyBudgetSummary";
+import { transactionService } from '../../services/transactionService';
+import { Transaction } from '../../domain/transaction/transaction';
+import AddTransactionScreen from './AddTransactionScreen';
+import * as Sentry from '@sentry/react-native';
 
 export default function FinanceSummaryScreen() {
-    const expenses = [
-        { name: 'Home', icon: '🏠', planned: 1200, actual: 1150 },
-        { name: 'Utilities', icon: '⚡', planned: 250, actual: 280 },
-        { name: 'Food', icon: '🍽️', planned: 600, actual: 650 },
-        { name: 'Delivery', icon: '🚚', planned: 150, actual: 120 },
-        { name: 'Shopping', icon: '🛍️', planned: 300, actual: 420 },
-    ];
+    const [expenses, setExpenses] = useState<Transaction[]>([]);
+    const [income, setIncome] = useState<Transaction[]>([]);
+    const [expenseTotal, setExpenseTotal] = useState(0);
+    const [incomeTotal, setIncomeTotal] = useState(0);
+    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
 
-    const income = [
-        { name: 'Salary', icon: '💵', planned: 5000, actual: 5000 },
-        { name: 'Bonus', icon: '🎁', planned: 500, actual: 750 },
-        { name: 'Interest', icon: '📈', planned: 50, actual: 65 },
-    ];
+    const fetchTransactions = useCallback(async () => {
+        try {
+            const transactions = await transactionService.listTransactions();
+            const expenses = transactions.filter(t => t.type === 'expense');
+            const income = transactions.filter(t => t.type === 'income');
+
+            setExpenses(expenses);
+            setIncome(income);
+
+            setExpenseTotal(expenses.reduce((acc, t) => acc + t.amount, 0));
+            setIncomeTotal(income.reduce((acc, t) => acc + t.amount, 0));
+        } catch (error) {
+            console.error("Failed to fetch transactions", error);
+            Sentry.captureException(error);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchTransactions();
+    }, [fetchTransactions]);
 
     return (
-       <ScrollView>
-           <FinanceHeader/>
-           <ScrollView style={styles.container}>
-               <MonthlyBudgetSummary/>
-               <FinanceCard title="Expenses" total="2,22620" data={expenses} />
-               <FinanceCard title="Income" total="5,2222" data={income} />
-           </ScrollView>
-       </ScrollView>
+        <View style={{ flex: 1 }}>
+            <Modal
+                visible={isAddModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setIsAddModalVisible(false)}
+            >
+                <AddTransactionScreen
+                    onClose={() => setIsAddModalVisible(false)}
+                    onSave={() => {
+                        fetchTransactions();
+                        setIsAddModalVisible(false);
+                    }}
+                />
+            </Modal>
+
+            <ScrollView>
+                <FinanceHeader onAddTransaction={() => setIsAddModalVisible(true)} />
+                <View style={styles.container}>
+                    <MonthlyBudgetSummary />
+                    <FinanceCard title="Expenses" total={expenseTotal.toFixed(2)} data={expenses} />
+                    <FinanceCard title="Income" total={incomeTotal.toFixed(2)} data={income} />
+                </View>
+            </ScrollView>
+        </View>
     );
 }
 

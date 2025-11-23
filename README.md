@@ -12,7 +12,7 @@ The styles are mostly vibe coded cause i am a backend dev lmao.
 
 *   **Cross-platform:** Runs on both Android and iOS devices.
 *   **Offline-first:** Uses Realm for local data storage.
-*   **Track Expenses:** Easily add, edit, and delete expenses.
+*   **Track Transactions:** Easily add, edit, and delete income and expenses.
 *   **API Integration:** Syncs with a backend server.
 
 ## 🚀 Tech Stack
@@ -59,13 +59,26 @@ The styles are mostly vibe coded cause i am a backend dev lmao.
 my-accounts-mobile/
 ├── assets/              # Images and other assets
 ├── src/
+│   ├── app/
+│   │   └── transaction/   # Transaction use cases
 │   ├── data/
-│   │   ├── apiClient.ts   # API client for backend communication
-│   │   └── realm/
-│   │       ├── realm.ts   # Realm database configuration
-│   │       └── schemas.ts # Realm database schemas
-│   └── services/
-│       └── expenseService.ts # Business logic for expenses
+│   │   ├── realm/
+│   │   │   ├── realm.ts   # Realm database configuration
+│   │   │   └── schemas.ts # Realm database schemas
+│   │   └── rest/
+│   │       └── apiClient.ts   # API client for backend communication
+│   ├── domain/
+│   │   └── transaction/   # Transaction domain model and repository interface
+│   ├── infrastructure/
+│   │   ├── api/
+│   │   │   └── transactionRepository.web.ts # Web implementation of the repository
+│   │   └── local/
+│   │       └── transactionRepository.mobile.ts # Mobile implementation of the repository
+│   ├── services/
+│   │   └── transactionService.ts # Business logic for transactions
+│   └── ui/
+│       ├── lib/             # Reusable UI components
+│       └── screens/         # App screens
 ├── App.tsx                # Main application component
 ├── package.json           # Project dependencies
 └── tsconfig.json          # TypeScript configuration

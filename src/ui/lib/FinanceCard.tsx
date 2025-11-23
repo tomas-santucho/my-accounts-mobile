@@ -1,28 +1,22 @@
 import React from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
+import { Transaction } from '../../domain/transaction/transaction';
 
-const FinanceCard = ({ title, total, data }) => {
-    const renderItem = ({ item }) => {
-        const diff = item.actual - item.planned;
-        const diffColor = diff >= 0 ? '#E74C3C' : '#2ECC71'; // red or green
-
+const FinanceCard = ({ title, total, data }: { title: string, total: string, data: Transaction[] }) => {
+    const renderItem = ({ item }: { item: Transaction }) => {
         return (
             <View style={styles.row}>
                 <View style={styles.iconContainer}>
-                    <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+                    <Text style={{ fontSize: 20 }}>{item.type === 'income' ? '💰' : '💸'}</Text>
                 </View>
 
                 <View style={styles.info}>
-                    <Text style={styles.category}>{item.name}</Text>
+                    <Text style={styles.category}>{item.description}</Text>
                     <View style={styles.values}>
-                        <Text style={styles.label}>Planned</Text>
-                        <Text style={styles.value}>${item.planned}</Text>
-                        <Text style={styles.label}>Actual</Text>
-                        <Text style={styles.value}>${item.actual}</Text>
-                        <Text style={styles.label}>Diff</Text>
-                        <Text style={[styles.value, { color: diffColor }]}>
-                            {diff > 0 ? `+$${diff}` : `$${diff}`}
-                        </Text>
+                        <Text style={styles.label}>Category</Text>
+                        <Text style={styles.value}>{item.category}</Text>
+                        <Text style={styles.label}>Amount</Text>
+                        <Text style={styles.value}>${item.amount.toFixed(2)}</Text>
                     </View>
                 </View>
             </View>
@@ -38,7 +32,7 @@ const FinanceCard = ({ title, total, data }) => {
             <FlatList
                 data={data}
                 renderItem={renderItem}
-                keyExtractor={(item) => item.name}
+                keyExtractor={(item) => item.id}
                 scrollEnabled={false}
             />
         </View>

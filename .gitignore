@@ -71,3 +71,5 @@ expo-debug.log
 *.orig
 *.patch
 *.bak
+
+.env.local

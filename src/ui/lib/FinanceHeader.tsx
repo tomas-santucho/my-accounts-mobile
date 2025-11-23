@@ -1,17 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
+import Logo from './Logo';
 
-export default function FinanceHeader() {
+interface FinanceHeaderProps {
+    onAddTransaction?: () => void;
+}
+
+export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) {
     const [currency, setCurrency] = useState('USD');
 
     return (
         <View style={styles.container}>
             <View style={styles.header}>
-                <View>
-                    <Text style={styles.title}>Finances</Text>
-                    <Text style={styles.subtitle}>
-                        Track your expenses and income to reach your financial goals
-                    </Text>
+                <View style={styles.titleRow}>
+                    <View style={styles.logoContainer}>
+                        <Logo width={32} height={32} />
+                    </View>
+                    <View>
+                        <Text style={styles.title}>Finances</Text>
+                        <Text style={styles.subtitle}>
+                            Track your expenses and income
+                        </Text>
+                    </View>
                 </View>
 
                 <View style={styles.toggleContainer}>
@@ -51,7 +61,7 @@ export default function FinanceHeader() {
                 </View>
             </View>
 
-            <TouchableOpacity style={styles.addButton}>
+            <TouchableOpacity style={styles.addButton} onPress={onAddTransaction}>
                 <Text style={styles.addText}>+ Add Transaction</Text>
             </TouchableOpacity>
         </View>
@@ -60,56 +70,76 @@ export default function FinanceHeader() {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#1A2343', // deep navy like the one in your screenshot
-        borderBottomLeftRadius: 15,
-        borderBottomRightRadius: 15,
-        padding: 20
+        backgroundColor: '#1A2343', // deep navy
+        borderBottomLeftRadius: 24,
+        borderBottomRightRadius: 24,
+        paddingHorizontal: 20,
+        paddingBottom: 24,
+        paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 24) + 20 : 60,
     },
     header: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        alignItems: 'center'
+        alignItems: 'flex-start',
+        marginBottom: 20,
+    },
+    titleRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+        marginRight: 10,
+    },
+    logoContainer: {
+        marginRight: 12,
     },
     title: {
         color: '#fff',
-        fontSize: 18,
-        fontWeight: '600'
+        fontSize: 22,
+        fontWeight: '700',
+        letterSpacing: 0.5,
     },
     subtitle: {
         color: '#B0B6D1',
         fontSize: 12,
-        marginTop: 4,
-        width: 220
+        marginTop: 2,
+        maxWidth: 180,
     },
     toggleContainer: {
         flexDirection: 'row',
-        backgroundColor: '#2B3258',
-        borderRadius: 20,
-        overflow: 'hidden'
+        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+        borderRadius: 12,
+        padding: 4,
     },
     toggleButton: {
         paddingVertical: 6,
-        paddingHorizontal: 15
+        paddingHorizontal: 12,
+        borderRadius: 8,
     },
     toggleText: {
-        color: '#999',
-        fontWeight: '600'
+        color: '#94A3B8',
+        fontWeight: '600',
+        fontSize: 12,
     },
     activeToggle: {
-        backgroundColor: '#fff'
+        backgroundColor: '#fff',
     },
     activeText: {
-        color: '#1A2343'
+        color: '#1A2343',
     },
     addButton: {
         backgroundColor: '#FF5B00',
-        paddingVertical: 12,
-        borderRadius: 8,
+        paddingVertical: 14,
+        borderRadius: 12,
         alignItems: 'center',
-        marginTop: 20
+        shadowColor: '#FF5B00',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.3,
+        shadowRadius: 8,
+        elevation: 4,
     },
     addText: {
         color: '#fff',
-        fontWeight: '600'
+        fontWeight: '600',
+        fontSize: 16,
     }
 });

@@ -1,125 +1,89 @@
-import { useEffect, useState } from "react"
-import { View, Text, Button, StyleSheet, FlatList, TextInput } from "react-native"
-import { Expense } from "./src/data/realm/schemas"
-import {
-  clearExpenses as clearExpensesService,
-  getExpenses,
-  saveExpense,
-} from "./src/services/expenseService"
-import FinanceHeader from "./src/ui/lib/FinanceHeader";
+import React, { useState } from "react";
+import { StyleSheet, View, Text, StatusBar } from "react-native";
 import FinanceSummaryScreen from "./src/ui/screens/FinanceSummaryScreen";
+import SettingsScreen from "./src/ui/screens/SettingsScreen";
+import TransactionsScreen from "./src/ui/screens/TransactionsScreen";
+import BottomNavigation, { Tab } from "./src/ui/lib/BottomNavigation";
+import SplashScreen from "./src/ui/screens/SplashScreen";
+import * as Sentry from '@sentry/react-native';
 
-export default function App() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
-  const [title, setTitle] = useState("")
-  const [amount, setAmount] = useState("")
+Sentry.init({
+  dsn: 'https://0c062097cd716eed51844d06da293f00@o4510410482909184.ingest.de.sentry.io/4510410485661776',
 
-  useEffect(() => {
-    loadExpenses()
-  }, [])
+  // Performance Monitoring
+  tracesSampleRate: 1.0, // Capture 100% of the transactions for testing
 
-  const loadExpenses = async () => {
-    const allExpenses = await getExpenses()
-    setExpenses(allExpenses)
+  // Session Replay
+  replaysSessionSampleRate: 0.1,
+  replaysOnErrorSampleRate: 1.0,
+
+  // Integrations
+  integrations: [
+    Sentry.mobileReplayIntegration(),
+    Sentry.feedbackIntegration(),
+  ],
+
+  // Debugging
+  debug: __DEV__, // Enable debug mode in development
+});
+
+export default Sentry.wrap(function App() {
+  const [currentTab, setCurrentTab] = useState<Tab>('Dashboard');
+  const [isAppReady, setIsAppReady] = useState(false);
+
+  if (!isAppReady) {
+    return <SplashScreen onFinish={() => setIsAppReady(true)} />;
   }
 
-  // add a new expense
-  const addExpense = async () => {
-    if (!title || !amount) return
-
-    await saveExpense({
-      title,
-      amount: parseFloat(amount),
-    })
-
-    setTitle("")
-    setAmount("")
-    await loadExpenses()
-  }
-
-  // delete all (for testing)
-  const clearExpenses = async () => {
-    await clearExpensesService()
-    setExpenses([])
-  }
+  const renderScreen = () => {
+    switch (currentTab) {
+      case 'Dashboard':
+        return <FinanceSummaryScreen />;
+      case 'Transactions':
+        return <TransactionsScreen />;
+      case 'Reports':
+        return <PlaceholderScreen title="Reports" />;
+      case 'Settings':
+        return <SettingsScreen />;
+      default:
+        return <FinanceSummaryScreen />;
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <FinanceSummaryScreen/>
-
-      <TextInput
-        placeholder="Expense name"
-        placeholderTextColor="#888"
-        value={title}
-        onChangeText={setTitle}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Amount"
-        placeholderTextColor="#888"
-        keyboardType="numeric"
-        value={amount}
-        onChangeText={setAmount}
-        style={styles.input}
-      />
-
-      <View style={styles.buttonRow}>
-        <Button title="Add Expense" onPress={addExpense} />
-        <Button title="Clear All" color="red" onPress={clearExpenses} />
+      <StatusBar barStyle="dark-content" backgroundColor="#F7F8FC" />
+      <View style={styles.content}>
+        {renderScreen()}
       </View>
-
-      <FlatList
-        data={expenses}
-        keyExtractor={(item) => item._id?.toHexString?.() || item._id?.toString() || String(item._id)}
-        renderItem={({ item }) => (
-          <View style={styles.expenseItem}>
-            <Text style={styles.expenseText}>
-              {item.title} — ${item.amount.toFixed(2)}
-            </Text>
-            <Text style={styles.expenseDate}>{item.date.toLocaleDateString()}</Text>
-          </View>
-        )}
-      />
+      <BottomNavigation currentTab={currentTab} onTabChange={setCurrentTab} />
     </View>
-  )
-}
+  );
+});
+
+const PlaceholderScreen = ({ title }: { title: string }) => (
+  <View style={styles.placeholderContainer}>
+    <Text style={styles.placeholderText}>{title}</Text>
+  </View>
+);
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 24,
-    backgroundColor: "#111",
+    backgroundColor: "#F7F8FC",
   },
-  title: {
-    color: "white",
-    fontSize: 26,
-    fontWeight: "bold",
-    marginBottom: 16,
+  content: {
+    flex: 1,
   },
-  input: {
-    backgroundColor: "#222",
-    color: "white",
-    padding: 10,
-    borderRadius: 6,
-    marginBottom: 10,
+  placeholderContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F7F8FC',
   },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 20,
+  placeholderText: {
+    fontSize: 20,
+    color: '#888',
+    fontWeight: '600',
   },
-  expenseItem: {
-    backgroundColor: "#1e1e1e",
-    padding: 12,
-    marginBottom: 8,
-    borderRadius: 6,
-  },
-  expenseText: {
-    color: "white",
-    fontSize: 16,
-  },
-  expenseDate: {
-    color: "#888",
-    fontSize: 12,
-  },
-})
+});

@@ -1,5 +1,5 @@
 import { Platform } from "react-native"
-import { ExpenseSchema } from "./schemas"
+import { TransactionSchema } from "./schemas"
 
 let Realm: any
 if (Platform.OS !== "web") {
@@ -12,5 +12,5 @@ export const openRealm = async () => {
   if (Platform.OS === "web") {
     throw new Error("Realm not supported on web")
   }
-  return await Realm.open({ schema: [ExpenseSchema] })
+  return await Realm.open({ schema: [TransactionSchema] })
 }
