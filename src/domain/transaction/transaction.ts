@@ -1,3 +1,4 @@
+import { v4 as uuidv4 } from 'uuid';
 import { z } from "zod";
 import 'react-native-get-random-values';
 
@@ -27,7 +28,7 @@ export const createTransaction = (
     installments?: number
 ): Transaction => {
     const transaction = {
-        id: crypto.randomUUID(),
+        id: uuidv4(),
         userId: userId,
         type,
         description,

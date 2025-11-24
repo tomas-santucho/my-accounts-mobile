@@ -41,7 +41,8 @@
           "project": "my-accounts",
           "organization": "my-accounts"
         }
-      ]
+      ],
+      "expo-localization"
     ]
   }
 }

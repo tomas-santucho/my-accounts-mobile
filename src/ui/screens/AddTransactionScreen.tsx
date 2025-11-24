@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { transactionService } from '../../services/transactionService';
+import { convertAmount, formatCurrency } from '../../services/currencyService';
+import ExchangeRateDisplay from '../lib/ExchangeRateDisplay';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme';
 
 interface AddTransactionScreenProps {
     onClose: () => void;
@@ -9,6 +13,8 @@ interface AddTransactionScreenProps {
 }
 
 export default function AddTransactionScreen({ onClose, onSave }: AddTransactionScreenProps) {
+    const insets = useSafeAreaInsets();
+    const { theme } = useTheme();
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
@@ -16,6 +22,33 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
     const [currency, setCurrency] = useState<'usd' | 'ars'>('usd');
     const [installments, setInstallments] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [convertedAmount, setConvertedAmount] = useState<string>('');
+
+    useEffect(() => {
+        const updateConversion = async () => {
+            const numericAmount = parseFloat(amount);
+            if (!amount || isNaN(numericAmount) || numericAmount <= 0) {
+                setConvertedAmount('');
+                return;
+            }
+
+            try {
+                const targetCurrency = currency === 'usd' ? 'ars' : 'usd';
+                const converted = await convertAmount(
+                    numericAmount,
+                    currency,
+                    targetCurrency,
+                    'blue'
+                );
+                setConvertedAmount(formatCurrency(converted, targetCurrency));
+            } catch (error) {
+                console.error('Conversion error:', error);
+                setConvertedAmount('');
+            }
+        };
+
+        updateConversion();
+    }, [amount, currency]);
 
     const handleSave = async () => {
         if (!amount || !description || !category) {
@@ -54,40 +87,56 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
     };
 
     return (
-        <View style={styles.container}>
-            <View style={styles.header}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background, paddingTop: insets.top }]}>
+            <StatusBar barStyle={theme.mode === 'dark' ? "light-content" : "dark-content"} backgroundColor={theme.colors.background} />
+            <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                    <Ionicons name="close" size={24} color="#1E293B" />
+                    <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={styles.headerTitle}>Add Transaction</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Add Transaction</Text>
                 <View style={{ width: 24 }} />
             </View>
 
             <ScrollView style={styles.content}>
                 {/* Type Segmented Control */}
-                <View style={styles.segmentContainer}>
+                <View style={[styles.segmentContainer, { backgroundColor: theme.colors.inputBackground }]}>
                     <TouchableOpacity
-                        style={[styles.segmentButton, type === 'expense' && styles.segmentActiveExpense]}
+                        style={[
+                            styles.segmentButton,
+                            type === 'expense' && { backgroundColor: theme.colors.cardBackground, ...styles.shadow }
+                        ]}
                         onPress={() => setType('expense')}
                     >
-                        <Text style={[styles.segmentText, type === 'expense' && styles.segmentTextActive]}>Expense</Text>
+                        <Text style={[
+                            styles.segmentText,
+                            { color: theme.colors.textSecondary },
+                            type === 'expense' && { color: theme.colors.textPrimary, fontWeight: '600' }
+                        ]}>Expense</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                        style={[styles.segmentButton, type === 'income' && styles.segmentActiveIncome]}
+                        style={[
+                            styles.segmentButton,
+                            type === 'income' && { backgroundColor: theme.colors.cardBackground, ...styles.shadow }
+                        ]}
                         onPress={() => setType('income')}
                     >
-                        <Text style={[styles.segmentText, type === 'income' && styles.segmentTextActive]}>Income</Text>
+                        <Text style={[
+                            styles.segmentText,
+                            { color: theme.colors.textSecondary },
+                            type === 'income' && { color: theme.colors.textPrimary, fontWeight: '600' }
+                        ]}>Income</Text>
                     </TouchableOpacity>
                 </View>
 
                 {/* Amount Input */}
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Amount</Text>
-                    <View style={styles.amountContainer}>
-                        <Text style={styles.currencySymbol}>{currency === 'usd' ? '$' : 'ARS'}</Text>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Amount</Text>
+                    <View style={[styles.amountContainer, { borderBottomColor: theme.colors.border }]}>
+                        <Text style={[styles.currencySymbol, { color: theme.colors.textPrimary }]}>{currency === 'usd' ? '$' : 'ARS'}</Text>
                         <TextInput
-                            style={styles.amountInput}
+                            style={[styles.amountInput, { color: theme.colors.textPrimary }]}
                             placeholder="0.00"
+                            placeholderTextColor={theme.colors.placeholder}
                             keyboardType="numeric"
                             value={amount}
                             onChangeText={setAmount}
@@ -97,29 +146,64 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
 
                 {/* Currency Selection */}
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Currency</Text>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Currency</Text>
                     <View style={styles.currencySelector}>
                         <TouchableOpacity
-                            style={[styles.currencyButton, currency === 'usd' && styles.currencyButtonActive]}
+                            style={[
+                                styles.currencyButton,
+                                { backgroundColor: theme.colors.cardBackground, borderColor: theme.colors.border },
+                                currency === 'usd' && { borderColor: theme.colors.primary, backgroundColor: theme.colors.background }
+                            ]}
                             onPress={() => setCurrency('usd')}
                         >
-                            <Text style={[styles.currencyButtonText, currency === 'usd' && styles.currencyButtonTextActive]}>USD</Text>
+                            <Text style={[
+                                styles.currencyButtonText,
+                                { color: theme.colors.textSecondary },
+                                currency === 'usd' && { color: theme.colors.primary, fontWeight: '600' }
+                            ]}>USD</Text>
                         </TouchableOpacity>
                         <TouchableOpacity
-                            style={[styles.currencyButton, currency === 'ars' && styles.currencyButtonActive]}
+                            style={[
+                                styles.currencyButton,
+                                { backgroundColor: theme.colors.cardBackground, borderColor: theme.colors.border },
+                                currency === 'ars' && { borderColor: theme.colors.primary, backgroundColor: theme.colors.background }
+                            ]}
                             onPress={() => setCurrency('ars')}
                         >
-                            <Text style={[styles.currencyButtonText, currency === 'ars' && styles.currencyButtonTextActive]}>ARS</Text>
+                            <Text style={[
+                                styles.currencyButtonText,
+                                { color: theme.colors.textSecondary },
+                                currency === 'ars' && { color: theme.colors.primary, fontWeight: '600' }
+                            ]}>ARS</Text>
                         </TouchableOpacity>
                     </View>
+                    {convertedAmount && (
+                        <View style={[styles.conversionPreview, { borderTopColor: theme.colors.border }]}>
+                            <Ionicons name="swap-horizontal" size={14} color={theme.colors.textSecondary} />
+                            <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
+                                ≈ {convertedAmount}
+                            </Text>
+                        </View>
+                    )}
                 </View>
+
+                {/* Exchange Rate Info */}
+                <ExchangeRateDisplay compact={true} />
 
                 {/* Description Input */}
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Description</Text>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Description</Text>
                     <TextInput
-                        style={styles.input}
+                        style={[
+                            styles.input,
+                            {
+                                backgroundColor: theme.colors.inputBackground,
+                                color: theme.colors.textPrimary,
+                                borderColor: theme.colors.border
+                            }
+                        ]}
                         placeholder="What is this for?"
+                        placeholderTextColor={theme.colors.placeholder}
                         value={description}
                         onChangeText={setDescription}
                     />
@@ -127,10 +211,18 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
 
                 {/* Category Input */}
                 <View style={styles.inputGroup}>
-                    <Text style={styles.label}>Category</Text>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Category</Text>
                     <TextInput
-                        style={styles.input}
+                        style={[
+                            styles.input,
+                            {
+                                backgroundColor: theme.colors.inputBackground,
+                                color: theme.colors.textPrimary,
+                                borderColor: theme.colors.border
+                            }
+                        ]}
                         placeholder="e.g. Food, Transport, Salary"
+                        placeholderTextColor={theme.colors.placeholder}
                         value={category}
                         onChangeText={setCategory}
                     />
@@ -139,10 +231,18 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
                 {/* Installments (Only for Expense) */}
                 {type === 'expense' && (
                     <View style={styles.inputGroup}>
-                        <Text style={styles.label}>Installments (Optional)</Text>
+                        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Installments (Optional)</Text>
                         <TextInput
-                            style={styles.input}
+                            style={[
+                                styles.input,
+                                {
+                                    backgroundColor: theme.colors.inputBackground,
+                                    color: theme.colors.textPrimary,
+                                    borderColor: theme.colors.border
+                                }
+                            ]}
                             placeholder="Number of installments"
+                            placeholderTextColor={theme.colors.placeholder}
                             keyboardType="number-pad"
                             value={installments}
                             onChangeText={setInstallments}
@@ -152,9 +252,13 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
 
             </ScrollView>
 
-            <View style={styles.footer}>
+            <View style={[styles.footer, { borderTopColor: theme.colors.border, paddingBottom: Math.max(insets.bottom, 20) }]}>
                 <TouchableOpacity
-                    style={[styles.saveButton, isSubmitting && styles.saveButtonDisabled]}
+                    style={[
+                        styles.saveButton,
+                        { backgroundColor: theme.colors.primary },
+                        isSubmitting && styles.saveButtonDisabled
+                    ]}
                     onPress={handleSave}
                     disabled={isSubmitting}
                 >
@@ -168,7 +272,6 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#FFF',
     },
     header: {
         flexDirection: 'row',
@@ -177,7 +280,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 16,
         paddingVertical: 16,
         borderBottomWidth: 1,
-        borderBottomColor: '#F1F5F9',
     },
     closeButton: {
         padding: 8,
@@ -185,7 +287,6 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#1E293B',
     },
     content: {
         flex: 1,
@@ -193,7 +294,6 @@ const styles = StyleSheet.create({
     },
     segmentContainer: {
         flexDirection: 'row',
-        backgroundColor: '#F1F5F9',
         borderRadius: 12,
         padding: 4,
         marginBottom: 24,
@@ -204,16 +304,7 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 8,
     },
-    segmentActiveExpense: {
-        backgroundColor: '#FFF',
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.1,
-        shadowRadius: 2,
-        elevation: 2,
-    },
-    segmentActiveIncome: {
-        backgroundColor: '#FFF',
+    shadow: {
         shadowColor: '#000',
         shadowOffset: { width: 0, height: 1 },
         shadowOpacity: 0.1,
@@ -223,11 +314,6 @@ const styles = StyleSheet.create({
     segmentText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#64748B',
-    },
-    segmentTextActive: {
-        color: '#1E293B',
-        fontWeight: '600',
     },
     inputGroup: {
         marginBottom: 20,
@@ -235,37 +321,30 @@ const styles = StyleSheet.create({
     label: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#64748B',
         marginBottom: 8,
     },
     amountContainer: {
         flexDirection: 'row',
         alignItems: 'center',
         borderBottomWidth: 2,
-        borderBottomColor: '#E2E8F0',
         paddingBottom: 8,
     },
     currencySymbol: {
         fontSize: 24,
         fontWeight: '600',
-        color: '#1E293B',
         marginRight: 8,
     },
     amountInput: {
         flex: 1,
         fontSize: 32,
         fontWeight: '700',
-        color: '#1E293B',
     },
     input: {
-        backgroundColor: '#F8FAFC',
         borderRadius: 12,
         paddingHorizontal: 16,
         paddingVertical: 12,
         fontSize: 16,
-        color: '#1E293B',
         borderWidth: 1,
-        borderColor: '#E2E8F0',
     },
     currencySelector: {
         flexDirection: 'row',
@@ -277,29 +356,28 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         borderRadius: 12,
         borderWidth: 1,
-        borderColor: '#E2E8F0',
-        backgroundColor: '#FFF',
-    },
-    currencyButtonActive: {
-        borderColor: '#FF7F50',
-        backgroundColor: '#FFF0E0',
     },
     currencyButtonText: {
         fontSize: 14,
         fontWeight: '500',
-        color: '#64748B',
     },
-    currencyButtonTextActive: {
-        color: '#FF7F50',
-        fontWeight: '600',
+    conversionPreview: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 8,
+        paddingTop: 8,
+        borderTopWidth: 1,
+    },
+    conversionText: {
+        fontSize: 14,
+        fontWeight: '500',
     },
     footer: {
         padding: 20,
         borderTopWidth: 1,
-        borderTopColor: '#F1F5F9',
     },
     saveButton: {
-        backgroundColor: '#1E293B',
         paddingVertical: 16,
         borderRadius: 16,
         alignItems: 'center',

@@ -5,8 +5,10 @@ import { transactionService } from '../../services/transactionService';
 import { Transaction } from '../../domain/transaction/transaction';
 import AddTransactionScreen from './AddTransactionScreen';
 import * as Sentry from '@sentry/react-native';
+import { useTheme } from '../theme';
 
 export default function TransactionsScreen() {
+    const { theme } = useTheme();
     const [currency, setCurrency] = useState<'USD' | 'ARS'>('USD');
     const [searchQuery, setSearchQuery] = useState('');
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -75,8 +77,8 @@ export default function TransactionsScreen() {
     };
 
     return (
-        <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#1E293B" />
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <StatusBar barStyle="light-content" backgroundColor={theme.colors.primaryDark} />
 
             <Modal
                 visible={isAddModalVisible}
@@ -98,15 +100,15 @@ export default function TransactionsScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.scrollContent}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#FFF" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.colors.primary} />
                 }
             >
                 {/* Header Section */}
-                <View style={styles.headerContainer}>
+                <View style={[styles.headerContainer, { backgroundColor: theme.colors.primaryDark }]}>
                     <View style={styles.headerTop}>
                         <View>
-                            <Text style={styles.headerTitle}>Transactions</Text>
-                            <Text style={styles.headerSubtitle}>View and manage all your transactions</Text>
+                            <Text style={[styles.headerTitle, { color: theme.colors.onPrimary }]}>Transactions</Text>
+                            <Text style={[styles.headerSubtitle, { color: 'rgba(255, 255, 255, 0.7)' }]}>View and manage all your transactions</Text>
                         </View>
                         <View style={styles.currencyToggle}>
                             <TouchableOpacity
@@ -126,46 +128,46 @@ export default function TransactionsScreen() {
 
                     <View style={styles.searchContainer}>
                         <View style={styles.searchInputContainer}>
-                            <Ionicons name="search" size={20} color="#64748B" style={styles.searchIcon} />
+                            <Ionicons name="search" size={20} color="rgba(255, 255, 255, 0.7)" style={styles.searchIcon} />
                             <TextInput
-                                style={styles.searchInput}
+                                style={[styles.searchInput, { color: theme.colors.onPrimary }]}
                                 placeholder="Search transactions..."
-                                placeholderTextColor="#64748B"
+                                placeholderTextColor="rgba(255, 255, 255, 0.5)"
                                 value={searchQuery}
                                 onChangeText={setSearchQuery}
                             />
                         </View>
                         <TouchableOpacity style={styles.filterButton}>
-                            <Ionicons name="options-outline" size={24} color="#FFF" />
+                            <Ionicons name="options-outline" size={24} color={theme.colors.onPrimary} />
                         </TouchableOpacity>
                     </View>
 
                     <TouchableOpacity
-                        style={styles.addButton}
+                        style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
                         activeOpacity={0.8}
                         onPress={() => setIsAddModalVisible(true)}
                     >
-                        <Ionicons name="add" size={24} color="#FFF" />
-                        <Text style={styles.addButtonText}>Add Transaction</Text>
+                        <Ionicons name="add" size={24} color={theme.colors.onPrimary} />
+                        <Text style={[styles.addButtonText, { color: theme.colors.onPrimary }]}>Add Transaction</Text>
                     </TouchableOpacity>
                 </View>
 
                 <View style={styles.bodyContainer}>
                     {/* Summary Cards */}
-                    <View style={styles.summaryContainer}>
+                    <View style={[styles.summaryContainer, { backgroundColor: theme.colors.cardBackground }]}>
                         <View style={styles.summaryCard}>
-                            <Text style={styles.summaryLabel}>Total Income</Text>
-                            <Text style={styles.summaryValueIncome}>+${totalIncome.toLocaleString()}</Text>
+                            <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Total Income</Text>
+                            <Text style={[styles.summaryValueIncome, { color: theme.colors.success }]}>+${totalIncome.toLocaleString()}</Text>
                         </View>
-                        <View style={styles.summaryDivider} />
+                        <View style={[styles.summaryDivider, { backgroundColor: theme.colors.border }]} />
                         <View style={styles.summaryCard}>
-                            <Text style={styles.summaryLabel}>Total Expenses</Text>
-                            <Text style={styles.summaryValueExpense}>-${totalExpense.toLocaleString()}</Text>
+                            <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Total Expenses</Text>
+                            <Text style={[styles.summaryValueExpense, { color: theme.colors.error }]}>-${totalExpense.toLocaleString()}</Text>
                         </View>
-                        <View style={styles.summaryDivider} />
+                        <View style={[styles.summaryDivider, { backgroundColor: theme.colors.border }]} />
                         <View style={styles.summaryCard}>
-                            <Text style={styles.summaryLabel}>Net Balance</Text>
-                            <Text style={styles.summaryValueBalance}>${netBalance.toLocaleString()}</Text>
+                            <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Net Balance</Text>
+                            <Text style={[styles.summaryValueBalance, { color: theme.colors.textPrimary }]}>${netBalance.toLocaleString()}</Text>
                         </View>
                     </View>
 
@@ -173,29 +175,29 @@ export default function TransactionsScreen() {
                     <View style={styles.listContainer}>
                         {sections.map((section) => (
                             <View key={section.title} style={styles.section}>
-                                <Text style={styles.sectionHeader}>{section.title}</Text>
-                                <View style={styles.cardList}>
+                                <Text style={[styles.sectionHeader, { color: theme.colors.textSecondary }]}>{section.title}</Text>
+                                <View style={[styles.cardList, { backgroundColor: theme.colors.cardBackground }]}>
                                     {section.data.map((item, index) => (
                                         <View key={item.id}>
                                             <TouchableOpacity style={styles.transactionItem}>
-                                                <View style={[styles.iconContainer, { backgroundColor: '#F1F5F9' }]}>
-                                                    <Ionicons name={getIconForCategory(item.category) as any} size={24} color="#64748B" />
+                                                <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>
+                                                    <Ionicons name={getIconForCategory(item.category) as any} size={24} color={theme.colors.textSecondary} />
                                                 </View>
                                                 <View style={styles.transactionInfo}>
-                                                    <Text style={styles.transactionTitle}>{item.description}</Text>
-                                                    <Text style={styles.transactionSubtitle}>
+                                                    <Text style={[styles.transactionTitle, { color: theme.colors.textPrimary }]}>{item.description}</Text>
+                                                    <Text style={[styles.transactionSubtitle, { color: theme.colors.textSecondary }]}>
                                                         {item.category} • {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                         {item.installments ? ` • ${item.installments} inst.` : ''}
                                                     </Text>
                                                 </View>
                                                 <Text style={[
                                                     styles.transactionAmount,
-                                                    item.type === 'income' ? styles.amountIncome : styles.amountExpense
+                                                    item.type === 'income' ? { color: theme.colors.success } : { color: theme.colors.error }
                                                 ]}>
                                                     {item.type === 'income' ? '+' : ''}{item.type === 'expense' ? '' : ''}${Math.abs(item.amount).toLocaleString()}
                                                 </Text>
                                             </TouchableOpacity>
-                                            {index < section.data.length - 1 && <View style={styles.itemSeparator} />}
+                                            {index < section.data.length - 1 && <View style={[styles.itemSeparator, { backgroundColor: theme.colors.border }]} />}
                                         </View>
                                     ))}
                                 </View>
@@ -203,7 +205,7 @@ export default function TransactionsScreen() {
                         ))}
                         {sections.length === 0 && (
                             <View style={{ alignItems: 'center', marginTop: 40 }}>
-                                <Text style={{ color: '#94A3B8' }}>No transactions found</Text>
+                                <Text style={{ color: theme.colors.textSecondary }}>No transactions found</Text>
                             </View>
                         )}
                     </View>
@@ -217,7 +219,6 @@ export default function TransactionsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F7F8FC',
     },
     scrollView: {
         flex: 1,
@@ -226,7 +227,6 @@ const styles = StyleSheet.create({
         flexGrow: 1,
     },
     headerContainer: {
-        backgroundColor: '#1E293B', // Dark blue/slate
         paddingTop: Platform.OS === 'ios' ? 60 : 40,
         paddingHorizontal: 20,
         paddingBottom: 40, // Increased padding to account for overlap
@@ -242,12 +242,10 @@ const styles = StyleSheet.create({
     headerTitle: {
         fontSize: 24,
         fontWeight: '700',
-        color: '#FFF',
         marginBottom: 4,
     },
     headerSubtitle: {
         fontSize: 14,
-        color: '#94A3B8',
     },
     currencyToggle: {
         flexDirection: 'row',
@@ -290,7 +288,6 @@ const styles = StyleSheet.create({
     },
     searchInput: {
         flex: 1,
-        color: '#FFF',
         fontSize: 16,
     },
     filterButton: {
@@ -302,21 +299,19 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     addButton: {
-        backgroundColor: '#FF5722', // Orange
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'center',
         paddingVertical: 14,
         borderRadius: 12,
         gap: 8,
-        shadowColor: '#FF5722',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
     addButtonText: {
-        color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
     },
@@ -326,7 +321,6 @@ const styles = StyleSheet.create({
     },
     summaryContainer: {
         flexDirection: 'row',
-        backgroundColor: '#FFF',
         borderRadius: 16,
         padding: 16,
         shadowColor: '#000',
@@ -344,28 +338,23 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontSize: 12,
-        color: '#64748B',
         marginBottom: 4,
     },
     summaryValueIncome: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#4CAF50',
     },
     summaryValueExpense: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#F44336',
     },
     summaryValueBalance: {
         fontSize: 16,
         fontWeight: '700',
-        color: '#1E293B',
     },
     summaryDivider: {
         width: 1,
         height: 30,
-        backgroundColor: '#E2E8F0',
     },
     listContainer: {
         gap: 24,
@@ -375,11 +364,9 @@ const styles = StyleSheet.create({
     },
     sectionHeader: {
         fontSize: 14,
-        color: '#64748B',
         fontWeight: '500',
     },
     cardList: {
-        backgroundColor: '#FFF',
         borderRadius: 16,
         padding: 8,
         shadowColor: '#000',
@@ -395,7 +382,6 @@ const styles = StyleSheet.create({
     },
     itemSeparator: {
         height: 1,
-        backgroundColor: '#F1F5F9',
         marginLeft: 60, // Indent separator
     },
     iconContainer: {
@@ -412,21 +398,13 @@ const styles = StyleSheet.create({
     transactionTitle: {
         fontSize: 16,
         fontWeight: '600',
-        color: '#1E293B',
         marginBottom: 2,
     },
     transactionSubtitle: {
         fontSize: 13,
-        color: '#64748B',
     },
     transactionAmount: {
         fontSize: 16,
         fontWeight: '600',
-    },
-    amountIncome: {
-        color: '#4CAF50',
-    },
-    amountExpense: {
-        color: '#F44336',
     },
 });

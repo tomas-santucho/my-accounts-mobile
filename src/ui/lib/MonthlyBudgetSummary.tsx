@@ -1,9 +1,11 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../theme';
 
 const MonthlyBudgetSummary = () => {
+    const { theme } = useTheme();
     // mock data
     const startingBalance = 99;
     const endingBalance = 99;
@@ -12,70 +14,70 @@ const MonthlyBudgetSummary = () => {
     const incomeExpended = 99;
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Top balance cards */}
             <View style={styles.balanceRow}>
-                <View style={styles.balanceCard}>
-                    <Text style={styles.balanceLabel}>Starting Balance</Text>
-                    <Text style={styles.balanceAmount}>${startingBalance.toLocaleString()}</Text>
+                <View style={[styles.balanceCard, { backgroundColor: theme.colors.cardBackground }]}>
+                    <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>Starting Balance</Text>
+                    <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>${startingBalance.toLocaleString()}</Text>
                     <LinearGradient
                         colors={['#FF7A00', '#FF5B00']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.gradientBar}
                     />
-                    <Text style={styles.percent}>100%</Text>
+                    <Text style={[styles.percent, { color: theme.colors.textSecondary }]}>100%</Text>
                 </View>
 
-                <View style={styles.balanceCard}>
-                    <Text style={styles.balanceLabel}>Ending Balance</Text>
-                    <Text style={styles.balanceAmount}>${endingBalance.toLocaleString()}</Text>
+                <View style={[styles.balanceCard, { backgroundColor: theme.colors.cardBackground }]}>
+                    <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>Ending Balance</Text>
+                    <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>${endingBalance.toLocaleString()}</Text>
                     <LinearGradient
                         colors={['#FF7A00', '#FF5B00']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={[styles.gradientBar, { width: '81%' }]}
                     />
-                    <Text style={styles.percent}>99%</Text>
+                    <Text style={[styles.percent, { color: theme.colors.textSecondary }]}>99%</Text>
                 </View>
             </View>
 
             {/* Summary card */}
-            <View style={styles.summaryCard}>
-                <Text style={styles.summaryTitle}>Summary</Text>
+            <View style={[styles.summaryCard, { backgroundColor: theme.colors.cardBackground }]}>
+                <Text style={[styles.summaryTitle, { color: theme.colors.textPrimary }]}>Summary</Text>
 
                 <View style={styles.summaryRow}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="trending-up-outline" size={22} color="#1A2343" />
+                    <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>
+                        <Ionicons name="trending-up-outline" size={22} color={theme.colors.textPrimary} />
                     </View>
                     <View style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>Savings Increase</Text>
-                        <Text style={styles.summaryValue}>+{savingsIncrease}%</Text>
+                        <Text style={[styles.summaryLabel, { color: theme.colors.textPrimary }]}>Savings Increase</Text>
+                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>+{savingsIncrease}%</Text>
                         <Text style={styles.subText}>vs last month</Text>
                     </View>
                 </View>
 
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
                 <View style={styles.summaryRow}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="wallet-outline" size={22} color="#1A2343" />
+                    <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>
+                        <Ionicons name="wallet-outline" size={22} color={theme.colors.textPrimary} />
                     </View>
                     <View style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>Total Saved This Month</Text>
-                        <Text style={styles.summaryValue}>${savedThisMonth.toLocaleString()}</Text>
+                        <Text style={[styles.summaryLabel, { color: theme.colors.textPrimary }]}>Total Saved This Month</Text>
+                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>${savedThisMonth.toLocaleString()}</Text>
                     </View>
                 </View>
 
-                <View style={styles.divider} />
+                <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
 
                 <View style={styles.summaryRow}>
-                    <View style={styles.iconContainer}>
-                        <Ionicons name="stats-chart-outline" size={22} color="#1A2343" />
+                    <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>
+                        <Ionicons name="stats-chart-outline" size={22} color={theme.colors.textPrimary} />
                     </View>
                     <View style={styles.summaryText}>
-                        <Text style={styles.summaryLabel}>Income Expended</Text>
-                        <Text style={styles.summaryValue}>{incomeExpended}%</Text>
+                        <Text style={[styles.summaryLabel, { color: theme.colors.textPrimary }]}>Income Expended</Text>
+                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>{incomeExpended}%</Text>
                         <Text style={[styles.subText, { color: '#FF5B00' }]}>of total income</Text>
                     </View>
                 </View>
@@ -89,7 +91,6 @@ export default MonthlyBudgetSummary;
 const styles = StyleSheet.create({
     container: {
         padding: 20,
-        backgroundColor: '#F7F8FC',
     },
     balanceRow: {
         flexDirection: 'row',
@@ -97,7 +98,6 @@ const styles = StyleSheet.create({
     },
     balanceCard: {
         flex: 1,
-        backgroundColor: '#fff',
         borderRadius: 14,
         padding: 16,
         marginHorizontal: 4,
@@ -108,11 +108,9 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     balanceLabel: {
-        color: '#666',
         fontSize: 13,
     },
     balanceAmount: {
-        color: '#1A2343',
         fontSize: 22,
         fontWeight: '700',
         marginVertical: 4,
@@ -124,12 +122,10 @@ const styles = StyleSheet.create({
         marginTop: 8,
     },
     percent: {
-        color: '#666',
         fontSize: 12,
         marginTop: 4,
     },
     summaryCard: {
-        backgroundColor: '#fff',
         borderRadius: 14,
         marginTop: 20,
         padding: 16,
@@ -141,7 +137,6 @@ const styles = StyleSheet.create({
     summaryTitle: {
         fontWeight: '700',
         fontSize: 16,
-        color: '#1A2343',
         marginBottom: 10,
     },
     summaryRow: {
@@ -150,7 +145,6 @@ const styles = StyleSheet.create({
         marginVertical: 6,
     },
     iconContainer: {
-        backgroundColor: '#E9ECF4',
         borderRadius: 30,
         padding: 10,
         marginRight: 10,
@@ -160,12 +154,10 @@ const styles = StyleSheet.create({
     },
     summaryLabel: {
         fontWeight: '600',
-        color: '#1A2343',
         fontSize: 14,
     },
     summaryValue: {
         fontWeight: '700',
-        color: '#1A2343',
         fontSize: 16,
         marginTop: 2,
     },
@@ -176,7 +168,6 @@ const styles = StyleSheet.create({
     },
     divider: {
         height: 1,
-        backgroundColor: '#E9ECF4',
         marginVertical: 6,
     },
 });

@@ -1,11 +1,14 @@
 import React, { useState } from "react";
-import { StyleSheet, View, Text, StatusBar } from "react-native";
+import { StyleSheet, View, Text, StatusBar, Platform } from "react-native";
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import FinanceSummaryScreen from "./src/ui/screens/FinanceSummaryScreen";
 import SettingsScreen from "./src/ui/screens/SettingsScreen";
 import TransactionsScreen from "./src/ui/screens/TransactionsScreen";
 import BottomNavigation, { Tab } from "./src/ui/lib/BottomNavigation";
 import SplashScreen from "./src/ui/screens/SplashScreen";
 import * as Sentry from '@sentry/react-native';
+import { PostHogProvider } from 'posthog-react-native';
+import { ThemeProvider, useTheme } from "./src/ui/theme";
 
 Sentry.init({
   dsn: 'https://0c062097cd716eed51844d06da293f00@o4510410482909184.ingest.de.sentry.io/4510410485661776',
@@ -19,7 +22,7 @@ Sentry.init({
 
   // Integrations
   integrations: [
-    Sentry.mobileReplayIntegration(),
+    ...(Platform.OS !== 'web' ? [Sentry.mobileReplayIntegration()] : []),
     Sentry.feedbackIntegration(),
   ],
 
@@ -27,7 +30,8 @@ Sentry.init({
   debug: __DEV__, // Enable debug mode in development
 });
 
-export default Sentry.wrap(function App() {
+const MainLayout = () => {
+  const { theme, isDark } = useTheme();
   const [currentTab, setCurrentTab] = useState<Tab>('Dashboard');
   const [isAppReady, setIsAppReady] = useState(false);
 
@@ -51,26 +55,50 @@ export default Sentry.wrap(function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#F7F8FC" />
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <StatusBar
+        barStyle={isDark ? "light-content" : "dark-content"}
+        backgroundColor={theme.colors.background}
+      />
       <View style={styles.content}>
         {renderScreen()}
       </View>
       <BottomNavigation currentTab={currentTab} onTabChange={setCurrentTab} />
     </View>
   );
+};
+
+export default Sentry.wrap(function App() {
+  return (
+    <SafeAreaProvider>
+      <PostHogProvider
+        apiKey="phc_sbzzyGxQJAz5lWr71T6nvBKv3OFghZSgvER3ltTOk7o"
+        options={{
+          host: 'https://eu.i.posthog.com',
+          enableSessionReplay: true,
+        }}
+        autocapture
+      >
+        <ThemeProvider>
+          <MainLayout />
+        </ThemeProvider>
+      </PostHogProvider>
+    </SafeAreaProvider>
+  );
 });
 
-const PlaceholderScreen = ({ title }: { title: string }) => (
-  <View style={styles.placeholderContainer}>
-    <Text style={styles.placeholderText}>{title}</Text>
-  </View>
-);
+const PlaceholderScreen = ({ title }: { title: string }) => {
+  const { theme } = useTheme();
+  return (
+    <View style={[styles.placeholderContainer, { backgroundColor: theme.colors.background }]}>
+      <Text style={[styles.placeholderText, { color: theme.colors.textSecondary }]}>{title}</Text>
+    </View>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F8FC",
   },
   content: {
     flex: 1,
@@ -79,11 +107,9 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#F7F8FC',
   },
   placeholderText: {
     fontSize: 20,
-    color: '#888',
     fontWeight: '600',
   },
 });

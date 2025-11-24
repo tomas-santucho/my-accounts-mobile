@@ -1,22 +1,73 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { Transaction } from '../../domain/transaction/transaction';
+import { Currency, RateType, convertAmount, formatCurrency } from '../../services/currencyService';
+import { useTheme } from '../theme';
 
-const FinanceCard = ({ title, total, data }: { title: string, total: string, data: Transaction[] }) => {
+interface FinanceCardProps {
+    title: string;
+    total: string;
+    data: Transaction[];
+    displayCurrency?: Currency;
+    rateType?: RateType;
+}
+
+const FinanceCard = ({
+    title,
+    total,
+    data,
+    displayCurrency = 'usd',
+    rateType = 'blue'
+}: FinanceCardProps) => {
+    const { theme } = useTheme();
+    const [convertedAmounts, setConvertedAmounts] = useState<Map<string, number>>(new Map());
+
+    useEffect(() => {
+        const convertTransactionAmounts = async () => {
+            const amounts = new Map<string, number>();
+
+            for (const item of data) {
+                const converted = await convertAmount(
+                    item.amount,
+                    item.currency,
+                    displayCurrency,
+                    rateType
+                );
+                amounts.set(item.id, converted);
+            }
+
+            setConvertedAmounts(amounts);
+        };
+
+        convertTransactionAmounts();
+    }, [data, displayCurrency, rateType]);
+
     const renderItem = ({ item }: { item: Transaction }) => {
+        const convertedAmount = convertedAmounts.get(item.id) || item.amount;
+        const showOriginal = item.currency !== displayCurrency;
+
         return (
-            <View style={styles.row}>
+            <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
                 <View style={styles.iconContainer}>
                     <Text style={{ fontSize: 20 }}>{item.type === 'income' ? '💰' : '💸'}</Text>
                 </View>
 
                 <View style={styles.info}>
-                    <Text style={styles.category}>{item.description}</Text>
+                    <Text style={[styles.category, { color: theme.colors.textPrimary }]}>{item.description}</Text>
                     <View style={styles.values}>
-                        <Text style={styles.label}>Category</Text>
-                        <Text style={styles.value}>{item.category}</Text>
-                        <Text style={styles.label}>Amount</Text>
-                        <Text style={styles.value}>${item.amount.toFixed(2)}</Text>
+                        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Category</Text>
+                        <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{item.category}</Text>
+                        <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Amount</Text>
+                        <View style={styles.amountContainer}>
+                            <Text style={[styles.value, { color: theme.colors.textPrimary }]}>
+                                {formatCurrency(convertedAmount, displayCurrency)}
+                            </Text>
+                            {showOriginal && (
+                                <Text style={[styles.originalAmount, { color: theme.colors.textSecondary }]}>
+                                    ({formatCurrency(item.amount, item.currency)})
+                                </Text>
+                            )}
+                        </View>
                     </View>
                 </View>
             </View>
@@ -24,10 +75,12 @@ const FinanceCard = ({ title, total, data }: { title: string, total: string, dat
     };
 
     return (
-        <View style={styles.card}>
+        <View style={[styles.card, { backgroundColor: theme.colors.cardBackground }]}>
             <View style={styles.header}>
-                <Text style={styles.title}>{title}</Text>
-                <Text style={styles.total}>Total: ${total}</Text>
+                <Text style={[styles.title, { color: theme.colors.textPrimary }]}>{title}</Text>
+                <Text style={[styles.total, { color: theme.colors.textSecondary }]}>
+                    Total: {displayCurrency === 'usd' ? '$' : 'ARS '}{total}
+                </Text>
             </View>
             <FlatList
                 data={data}
@@ -41,7 +94,6 @@ const FinanceCard = ({ title, total, data }: { title: string, total: string, dat
 
 const styles = StyleSheet.create({
     card: {
-        backgroundColor: '#fff',
         borderRadius: 12,
         padding: 16,
         marginVertical: 10,
@@ -57,18 +109,15 @@ const styles = StyleSheet.create({
     },
     title: {
         fontWeight: '700',
-        color: '#1A2343',
         fontSize: 16,
     },
     total: {
-        color: '#333',
         fontWeight: '600',
     },
     row: {
         flexDirection: 'row',
         alignItems: 'center',
         paddingVertical: 10,
-        borderBottomColor: '#eee',
         borderBottomWidth: 1,
     },
     iconContainer: {
@@ -80,7 +129,6 @@ const styles = StyleSheet.create({
     },
     category: {
         fontWeight: '600',
-        color: '#1A2343',
     },
     values: {
         flexDirection: 'row',
@@ -88,7 +136,6 @@ const styles = StyleSheet.create({
         marginTop: 4,
     },
     label: {
-        color: '#888',
         fontSize: 12,
     },
     value: {
@@ -96,6 +143,14 @@ const styles = StyleSheet.create({
         fontSize: 13,
         width: 55,
         textAlign: 'right',
+    },
+    amountContainer: {
+        width: 55,
+        alignItems: 'flex-end',
+    },
+    originalAmount: {
+        fontSize: 10,
+        marginTop: 2,
     },
 });
 

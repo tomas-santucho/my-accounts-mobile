@@ -19,7 +19,7 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
                 createdAt: new Date(t.createdAt)
             }));
         } catch (error) {
-            console.error("Error fetching transactions:", error);
+            console.error("Error fetching transactions. Ensure backend is running at http://localhost:8080 and CORS is configured.", error);
             Sentry.captureException(error);
             return [];
         }

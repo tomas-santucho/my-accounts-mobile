@@ -1,108 +1,264 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
+import { getCurrencyPreferences, setDisplayCurrency, setRateType } from '../../config/currencyPreferences';
+import { Currency, RateType, clearRateCache } from '../../services/currencyService';
+import { useTheme } from '../theme';
 
 export default function SettingsScreen() {
+    const { theme, isDark, setThemeMode, themeMode } = useTheme();
+    const [displayCurrency, setDisplayCurrencyState] = useState<Currency>('usd');
+    const [rateTypePreference, setRateTypeState] = useState<RateType>('blue');
+
+    useEffect(() => {
+        loadPreferences();
+    }, []);
+
+    const loadPreferences = async () => {
+        const prefs = await getCurrencyPreferences();
+        setDisplayCurrencyState(prefs.displayCurrency);
+        setRateTypeState(prefs.rateType);
+    };
+
+    const handleDisplayCurrencyChange = async (currency: Currency) => {
+        setDisplayCurrencyState(currency);
+        await setDisplayCurrency(currency);
+    };
+
+    const handleRateTypeChange = async (rateType: RateType) => {
+        setRateTypeState(rateType);
+        await setRateType(rateType);
+        clearRateCache(); // Force refresh of rates
+    };
+
+    const handleThemeChange = () => {
+        // Cycle through Light -> Dark -> System
+        if (themeMode === 'light') setThemeMode('dark');
+        else if (themeMode === 'dark') setThemeMode('system');
+        else setThemeMode('light');
+    };
+
+    const getThemeLabel = () => {
+        if (themeMode === 'system') return 'System Default';
+        if (themeMode === 'light') return 'Light Mode';
+        return 'Dark Mode';
+    };
+
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.header}>
-                <Text style={styles.headerTitle}>Settings</Text>
+        <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+            <StatusBar barStyle={isDark ? "light-content" : "dark-content"} backgroundColor={theme.colors.cardBackground} />
+            <View style={[styles.header, { backgroundColor: theme.colors.cardBackground }]}>
+                <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Settings</Text>
             </View>
 
             {/* User Profile Section */}
             <View style={styles.section}>
-                <View style={styles.profileContainer}>
-                    <View style={styles.avatarContainer}>
+                <View style={[styles.profileContainer, { backgroundColor: theme.colors.cardBackground }]}>
+                    <View style={[styles.avatarContainer, { backgroundColor: theme.colors.primary }]}>
                         <Ionicons name="person" size={40} color="#FFF" />
                     </View>
                     <View style={styles.profileInfo}>
-                        <Text style={styles.profileName}>Tomas Santucho</Text>
-                        <Text style={styles.profileEmail}>voidsynths@proton.me</Text>
+                        <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>Tomas Santucho</Text>
+                        <Text style={[styles.profileEmail, { color: theme.colors.textSecondary }]}>voidsynths@proton.me</Text>
                     </View>
                     <TouchableOpacity style={styles.editButton}>
-                        <Ionicons name="pencil-outline" size={20} color="#666" />
+                        <Ionicons name="pencil-outline" size={20} color={theme.colors.textSecondary} />
                     </TouchableOpacity>
+                </View>
+            </View>
+
+            {/* Currency Preferences Section */}
+            <View style={styles.section}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Currency Preferences</Text>
+
+                <View style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}>
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#1B5E20' : '#E8F5E9' }]}>
+                        <Ionicons name="cash-outline" size={22} color="#4CAF50" />
+                    </View>
+                    <View style={styles.settingContent}>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Display Currency</Text>
+                        <View style={styles.currencyOptions}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.currencyOption,
+                                    {
+                                        backgroundColor: theme.colors.background,
+                                        borderColor: theme.colors.border
+                                    },
+                                    displayCurrency === 'usd' && {
+                                        borderColor: theme.colors.primary,
+                                        backgroundColor: isDark ? theme.colors.surface : '#FFF0E0' // Adjust active bg
+                                    }
+                                ]}
+                                onPress={() => handleDisplayCurrencyChange('usd')}
+                            >
+                                <Text style={[
+                                    styles.currencyOptionText,
+                                    { color: theme.colors.textSecondary },
+                                    displayCurrency === 'usd' && { color: theme.colors.primary, fontWeight: '600' }
+                                ]}>USD</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.currencyOption,
+                                    {
+                                        backgroundColor: theme.colors.background,
+                                        borderColor: theme.colors.border
+                                    },
+                                    displayCurrency === 'ars' && {
+                                        borderColor: theme.colors.primary,
+                                        backgroundColor: isDark ? theme.colors.surface : '#FFF0E0'
+                                    }
+                                ]}
+                                onPress={() => handleDisplayCurrencyChange('ars')}
+                            >
+                                <Text style={[
+                                    styles.currencyOptionText,
+                                    { color: theme.colors.textSecondary },
+                                    displayCurrency === 'ars' && { color: theme.colors.primary, fontWeight: '600' }
+                                ]}>ARS</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </View>
+
+                <View style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}>
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#E65100' : '#FFF3E0' }]}>
+                        <Ionicons name="trending-up-outline" size={22} color="#FF9800" />
+                    </View>
+                    <View style={styles.settingContent}>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Exchange Rate Type</Text>
+                        <Text style={[styles.settingSubLabel, { color: theme.colors.textSecondary }]}>
+                            {rateTypePreference === 'blue' ? 'Blue (Parallel Market)' : 'Official Rate'}
+                        </Text>
+                        <View style={styles.currencyOptions}>
+                            <TouchableOpacity
+                                style={[
+                                    styles.currencyOption,
+                                    {
+                                        backgroundColor: theme.colors.background,
+                                        borderColor: theme.colors.border
+                                    },
+                                    rateTypePreference === 'blue' && {
+                                        borderColor: theme.colors.primary,
+                                        backgroundColor: isDark ? theme.colors.surface : '#FFF0E0'
+                                    }
+                                ]}
+                                onPress={() => handleRateTypeChange('blue')}
+                            >
+                                <Text style={[
+                                    styles.currencyOptionText,
+                                    { color: theme.colors.textSecondary },
+                                    rateTypePreference === 'blue' && { color: theme.colors.primary, fontWeight: '600' }
+                                ]}>Blue</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                                style={[
+                                    styles.currencyOption,
+                                    {
+                                        backgroundColor: theme.colors.background,
+                                        borderColor: theme.colors.border
+                                    },
+                                    rateTypePreference === 'official' && {
+                                        borderColor: theme.colors.primary,
+                                        backgroundColor: isDark ? theme.colors.surface : '#FFF0E0'
+                                    }
+                                ]}
+                                onPress={() => handleRateTypeChange('official')}
+                            >
+                                <Text style={[
+                                    styles.currencyOptionText,
+                                    { color: theme.colors.textSecondary },
+                                    rateTypePreference === 'official' && { color: theme.colors.primary, fontWeight: '600' }
+                                ]}>Official</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
                 </View>
             </View>
 
             {/* Data & Sync Section */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Data & Sync</Text>
-                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                    <View style={styles.settingIconContainer}>
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Data & Sync</Text>
+                <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]} activeOpacity={0.7}>
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#0D47A1' : '#E3F2FD' }]}>
                         <Ionicons name="cloud-upload-outline" size={22} color="#4A90E2" />
                     </View>
                     <View style={styles.settingContent}>
-                        <Text style={styles.settingLabel}>Sync with Database</Text>
-                        <Text style={styles.settingSubLabel}>Backup your data to the cloud</Text>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Sync with Database</Text>
+                        <Text style={[styles.settingSubLabel, { color: theme.colors.textSecondary }]}>Backup your data to the cloud</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#CCC" />
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
             </View>
 
-            {/* Preferences Section (Placeholder for future) */}
+            {/* Preferences Section */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Preferences</Text>
-                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                    <View style={[styles.settingIconContainer, { backgroundColor: '#E8F5E9' }]}>
-                        <Ionicons name="moon-outline" size={22} color="#4CAF50" />
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Preferences</Text>
+                <TouchableOpacity
+                    style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
+                    activeOpacity={0.7}
+                    onPress={handleThemeChange}
+                >
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#1B5E20' : '#E8F5E9' }]}>
+                        <Ionicons name={isDark ? "moon" : "sunny"} size={22} color="#4CAF50" />
                     </View>
                     <View style={styles.settingContent}>
-                        <Text style={styles.settingLabel}>Dark Mode</Text>
-                        <Text style={styles.settingSubLabel}>System Default</Text>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Theme</Text>
+                        <Text style={[styles.settingSubLabel, { color: theme.colors.textSecondary }]}>{getThemeLabel()}</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#CCC" />
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.settingItem} activeOpacity={0.7}>
-                    <View style={[styles.settingIconContainer, { backgroundColor: '#FFF3E0' }]}>
+                <TouchableOpacity style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]} activeOpacity={0.7}>
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#E65100' : '#FFF3E0' }]}>
                         <Ionicons name="notifications-outline" size={22} color="#FF9800" />
                     </View>
                     <View style={styles.settingContent}>
-                        <Text style={styles.settingLabel}>Notifications</Text>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Notifications</Text>
                     </View>
-                    <Ionicons name="chevron-forward" size={20} color="#CCC" />
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
             </View>
 
             {/* Debug Section */}
             <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Debug</Text>
+                <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Debug</Text>
                 <TouchableOpacity
-                    style={styles.settingItem}
+                    style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
                     activeOpacity={0.7}
                     onPress={() => {
                         Sentry.captureMessage("Manual Test Message from Settings");
                         alert("Sent test message to Sentry");
                     }}
                 >
-                    <View style={[styles.settingIconContainer, { backgroundColor: '#E3F2FD' }]}>
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#0D47A1' : '#E3F2FD' }]}>
                         <Ionicons name="paper-plane-outline" size={22} color="#2196F3" />
                     </View>
                     <View style={styles.settingContent}>
-                        <Text style={styles.settingLabel}>Send Test Message</Text>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Send Test Message</Text>
                     </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                    style={styles.settingItem}
+                    style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
                     activeOpacity={0.7}
                     onPress={() => {
                         throw new Error("Test Sentry Crash from Settings");
                     }}
                 >
-                    <View style={[styles.settingIconContainer, { backgroundColor: '#FFEBEE' }]}>
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#B71C1C' : '#FFEBEE' }]}>
                         <Ionicons name="bug-outline" size={22} color="#D32F2F" />
                     </View>
                     <View style={styles.settingContent}>
-                        <Text style={styles.settingLabel}>Force Crash</Text>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Force Crash</Text>
                     </View>
                 </TouchableOpacity>
             </View>
 
             <View style={styles.section}>
-                <TouchableOpacity style={styles.logoutButton}>
+                <TouchableOpacity style={[styles.logoutButton, { backgroundColor: isDark ? '#3E2723' : '#FFF0F0' }]}>
                     <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
             </View>
@@ -113,18 +269,15 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        backgroundColor: '#F7F8FC',
     },
     header: {
         paddingHorizontal: 20,
         paddingTop: 60,
         paddingBottom: 20,
-        backgroundColor: '#FFF',
     },
     headerTitle: {
         fontSize: 28,
         fontWeight: '700',
-        color: '#1A1A1A',
     },
     section: {
         marginTop: 24,
@@ -133,7 +286,6 @@ const styles = StyleSheet.create({
     sectionTitle: {
         fontSize: 14,
         fontWeight: '600',
-        color: '#888',
         marginBottom: 12,
         textTransform: 'uppercase',
         letterSpacing: 0.5,
@@ -141,7 +293,6 @@ const styles = StyleSheet.create({
     profileContainer: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF',
         padding: 16,
         borderRadius: 16,
         shadowColor: '#000',
@@ -154,7 +305,6 @@ const styles = StyleSheet.create({
         width: 60,
         height: 60,
         borderRadius: 30,
-        backgroundColor: '#FF7F50', // Coral to match brand
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -165,11 +315,9 @@ const styles = StyleSheet.create({
     profileName: {
         fontSize: 18,
         fontWeight: '600',
-        color: '#1A1A1A',
     },
     profileEmail: {
         fontSize: 14,
-        color: '#888',
         marginTop: 2,
     },
     editButton: {
@@ -178,7 +326,6 @@ const styles = StyleSheet.create({
     settingItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#FFF',
         padding: 16,
         marginBottom: 12,
         borderRadius: 16,
@@ -192,7 +339,6 @@ const styles = StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: 10,
-        backgroundColor: '#E3F2FD',
         justifyContent: 'center',
         alignItems: 'center',
         marginRight: 16,
@@ -203,15 +349,27 @@ const styles = StyleSheet.create({
     settingLabel: {
         fontSize: 16,
         fontWeight: '500',
-        color: '#1A1A1A',
     },
     settingSubLabel: {
         fontSize: 13,
-        color: '#888',
         marginTop: 2,
     },
+    currencyOptions: {
+        flexDirection: 'row',
+        gap: 8,
+        marginTop: 12,
+    },
+    currencyOption: {
+        paddingVertical: 8,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        borderWidth: 1,
+    },
+    currencyOptionText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
     logoutButton: {
-        backgroundColor: '#FFF0F0',
         padding: 16,
         borderRadius: 16,
         alignItems: 'center',

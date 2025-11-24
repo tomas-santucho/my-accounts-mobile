@@ -1,41 +1,44 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
 import Logo from './Logo';
+import { useTheme } from '../theme';
 
 interface FinanceHeaderProps {
     onAddTransaction?: () => void;
 }
 
 export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) {
+    const { theme } = useTheme();
     const [currency, setCurrency] = useState('USD');
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { backgroundColor: theme.colors.primaryDark }]}>
             <View style={styles.header}>
                 <View style={styles.titleRow}>
                     <View style={styles.logoContainer}>
                         <Logo width={32} height={32} />
                     </View>
                     <View>
-                        <Text style={styles.title}>Finances</Text>
-                        <Text style={styles.subtitle}>
+                        <Text style={[styles.title, { color: theme.colors.onPrimary }]}>Finances</Text>
+                        <Text style={[styles.subtitle, { color: 'rgba(255, 255, 255, 0.7)' }]}>
                             Track your expenses and income
                         </Text>
                     </View>
                 </View>
 
-                <View style={styles.toggleContainer}>
+                <View style={[styles.toggleContainer, { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]}>
                     <TouchableOpacity
                         style={[
                             styles.toggleButton,
-                            currency === 'USD' && styles.activeToggle
+                            currency === 'USD' && { backgroundColor: theme.colors.onPrimary }
                         ]}
                         onPress={() => setCurrency('USD')}
                     >
                         <Text
                             style={[
                                 styles.toggleText,
-                                currency === 'USD' && styles.activeText
+                                { color: 'rgba(255, 255, 255, 0.5)' },
+                                currency === 'USD' && { color: theme.colors.primary }
                             ]}
                         >
                             USD
@@ -45,14 +48,15 @@ export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) 
                     <TouchableOpacity
                         style={[
                             styles.toggleButton,
-                            currency === 'ARS' && styles.activeToggle
+                            currency === 'ARS' && { backgroundColor: theme.colors.onPrimary }
                         ]}
                         onPress={() => setCurrency('ARS')}
                     >
                         <Text
                             style={[
                                 styles.toggleText,
-                                currency === 'ARS' && styles.activeText
+                                { color: 'rgba(255, 255, 255, 0.5)' },
+                                currency === 'ARS' && { color: theme.colors.primary }
                             ]}
                         >
                             ARS
@@ -61,8 +65,11 @@ export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) 
                 </View>
             </View>
 
-            <TouchableOpacity style={styles.addButton} onPress={onAddTransaction}>
-                <Text style={styles.addText}>+ Add Transaction</Text>
+            <TouchableOpacity
+                style={[styles.addButton, { backgroundColor: theme.colors.secondary }]}
+                onPress={onAddTransaction}
+            >
+                <Text style={[styles.addText, { color: theme.colors.onPrimary }]}>+ Add Transaction</Text>
             </TouchableOpacity>
         </View>
     );
@@ -70,7 +77,6 @@ export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) 
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#1A2343', // deep navy
         borderBottomLeftRadius: 24,
         borderBottomRightRadius: 24,
         paddingHorizontal: 20,
@@ -93,20 +99,17 @@ const styles = StyleSheet.create({
         marginRight: 12,
     },
     title: {
-        color: '#fff',
         fontSize: 22,
         fontWeight: '700',
         letterSpacing: 0.5,
     },
     subtitle: {
-        color: '#B0B6D1',
         fontSize: 12,
         marginTop: 2,
         maxWidth: 180,
     },
     toggleContainer: {
         flexDirection: 'row',
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 12,
         padding: 4,
     },
@@ -116,29 +119,20 @@ const styles = StyleSheet.create({
         borderRadius: 8,
     },
     toggleText: {
-        color: '#94A3B8',
         fontWeight: '600',
         fontSize: 12,
     },
-    activeToggle: {
-        backgroundColor: '#fff',
-    },
-    activeText: {
-        color: '#1A2343',
-    },
     addButton: {
-        backgroundColor: '#FF5B00',
         paddingVertical: 14,
         borderRadius: 12,
         alignItems: 'center',
-        shadowColor: '#FF5B00',
+        shadowColor: '#000',
         shadowOffset: { width: 0, height: 4 },
         shadowOpacity: 0.3,
         shadowRadius: 8,
         elevation: 4,
     },
     addText: {
-        color: '#fff',
         fontWeight: '600',
         fontSize: 16,
     }

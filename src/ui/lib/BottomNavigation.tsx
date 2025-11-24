@@ -1,6 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useTheme } from '../theme';
 
 export type Tab = 'Dashboard' | 'Transactions' | 'Reports' | 'Settings';
 
@@ -10,6 +12,9 @@ interface BottomNavigationProps {
 }
 
 export default function BottomNavigation({ currentTab, onTabChange }: BottomNavigationProps) {
+  const insets = useSafeAreaInsets();
+  const { theme } = useTheme();
+
   const tabs: { name: Tab; icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
     { name: 'Dashboard', icon: 'grid-outline', label: 'Dashboard' },
     { name: 'Transactions', icon: 'receipt-outline', label: 'Transactions' },
@@ -18,9 +23,18 @@ export default function BottomNavigation({ currentTab, onTabChange }: BottomNavi
   ];
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container,
+      {
+        backgroundColor: theme.colors.tabBarBackground,
+        borderTopColor: theme.colors.border,
+        paddingBottom: Math.max(insets.bottom, 20)
+      }
+    ]}>
       {tabs.map((tab) => {
         const isActive = currentTab === tab.name;
+        const color = isActive ? theme.colors.tabBarActive : theme.colors.tabBarInactive;
+
         return (
           <TouchableOpacity
             key={tab.name}
@@ -31,9 +45,9 @@ export default function BottomNavigation({ currentTab, onTabChange }: BottomNavi
             <Ionicons
               name={isActive ? (tab.icon.replace('-outline', '') as any) : tab.icon}
               size={24}
-              color={isActive ? '#FF7F50' : '#A0A0A0'} // Coral orange for active, Gray for inactive
+              color={color}
             />
-            <Text style={[styles.label, isActive && styles.activeLabel]}>
+            <Text style={[styles.label, { color }]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -46,12 +60,10 @@ export default function BottomNavigation({ currentTab, onTabChange }: BottomNavi
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // Increased padding for home indicator
+    // paddingBottom handled by safe area insets
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -70,8 +82,5 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 10,
     fontWeight: '500',
-  },
-  activeLabel: {
-    color: '#FF7F50',
   },
 });
