@@ -97,4 +97,19 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
             throw error;
         }
     },
+
+    async deleteTransactionsByInstallmentGroup(installmentGroupId: string): Promise<void> {
+        try {
+            const response = await fetch(`${API_URL}/installment-group/${installmentGroupId}`, {
+                method: "DELETE",
+            });
+            if (!response.ok) {
+                throw new Error(`Failed to delete installment group: ${response.statusText}`);
+            }
+        } catch (error) {
+            console.error("Error deleting installment group:", error);
+            Sentry.captureException(error);
+            throw error;
+        }
+    },
 });

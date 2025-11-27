@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, StatusBar, Modal } from 'react-native';
+import CategoryListScreen from './CategoryListScreen';
 import { Ionicons } from '@expo/vector-icons';
 import * as Sentry from '@sentry/react-native';
 import { getCurrencyPreferences, setDisplayCurrency, setRateType } from '../../config/currencyPreferences';
@@ -10,6 +11,7 @@ export default function SettingsScreen() {
     const { theme, isDark, setThemeMode, themeMode } = useTheme();
     const [displayCurrency, setDisplayCurrencyState] = useState<Currency>('usd');
     const [rateTypePreference, setRateTypeState] = useState<RateType>('blue');
+    const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
 
     useEffect(() => {
         loadPreferences();
@@ -199,6 +201,21 @@ export default function SettingsScreen() {
                 <TouchableOpacity
                     style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
                     activeOpacity={0.7}
+                    onPress={() => setIsCategoryModalVisible(true)}
+                >
+                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#004D40' : '#E0F2F1' }]}>
+                        <Ionicons name="pricetags-outline" size={22} color="#009688" />
+                    </View>
+                    <View style={styles.settingContent}>
+                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Categories</Text>
+                        <Text style={[styles.settingSubLabel, { color: theme.colors.textSecondary }]}>Manage transaction categories</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
+                    activeOpacity={0.7}
                     onPress={handleThemeChange}
                 >
                     <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#1B5E20' : '#E8F5E9' }]}>
@@ -262,6 +279,15 @@ export default function SettingsScreen() {
                     <Text style={styles.logoutText}>Log Out</Text>
                 </TouchableOpacity>
             </View>
+
+            <Modal
+                visible={isCategoryModalVisible}
+                animationType="slide"
+                presentationStyle="pageSheet"
+                onRequestClose={() => setIsCategoryModalVisible(false)}
+            >
+                <CategoryListScreen onClose={() => setIsCategoryModalVisible(false)} />
+            </Modal>
         </ScrollView>
     );
 }

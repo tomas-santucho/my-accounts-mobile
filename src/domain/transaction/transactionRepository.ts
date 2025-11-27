@@ -6,4 +6,5 @@ export interface TransactionRepository {
     addTransaction(transaction: Transaction): Promise<void>;
     updateTransaction(transaction: Transaction): Promise<void>;
     deleteTransaction(id: string): Promise<void>;
+    deleteTransactionsByInstallmentGroup(installmentGroupId: string): Promise<void>;
 }

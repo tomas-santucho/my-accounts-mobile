@@ -16,13 +16,13 @@ export const createMobileTransactionRepository = (): TransactionRepository => {
         async getTransactions(): Promise<Transaction[]> {
             const db = await getDb();
             const results = db.objects<Transaction>("Transaction");
-            return results.map(t => ({...t}));
+            return results.map(t => ({ ...t }));
         },
 
         async getTransaction(id: string): Promise<Transaction | null> {
             const db = await getDb();
             const transaction = db.objectForPrimaryKey<Transaction>("Transaction", id);
-            return transaction ? {...transaction} : null;
+            return transaction ? { ...transaction } : null;
         },
 
         async addTransaction(transaction: Transaction): Promise<void> {
@@ -45,6 +45,18 @@ export const createMobileTransactionRepository = (): TransactionRepository => {
             if (transaction) {
                 db.write(() => {
                     db.delete(transaction);
+                });
+            }
+        },
+
+        async deleteTransactionsByInstallmentGroup(installmentGroupId: string): Promise<void> {
+            const db = await getDb();
+            const transactions = db.objects<Transaction>("Transaction")
+                .filtered("installmentGroupId == $0", installmentGroupId);
+
+            if (transactions.length > 0) {
+                db.write(() => {
+                    db.delete(transactions);
                 });
             }
         },

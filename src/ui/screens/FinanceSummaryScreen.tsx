@@ -7,6 +7,8 @@ import CurrencyToggle from '../lib/CurrencyToggle';
 import ExchangeRateDisplay from '../lib/ExchangeRateDisplay';
 import { transactionService } from '../../services/transactionService';
 import { Transaction } from '../../domain/transaction/transaction';
+import { Category } from '../../domain/category/category';
+import { categoryService } from '../../services/categoryService';
 import AddTransactionScreen from './AddTransactionScreen';
 import * as Sentry from '@sentry/react-native';
 import { Currency, convertAmount } from '../../services/currencyService';
@@ -48,8 +50,21 @@ export default function FinanceSummaryScreen() {
     const fetchTransactions = useCallback(async () => {
         try {
             const transactions = await transactionService.listTransactions();
-            const expenseList = transactions.filter(t => t.type === 'expense');
-            const incomeList = transactions.filter(t => t.type === 'income');
+
+            // Get current month and year
+            const now = new Date();
+            const currentMonth = now.getMonth();
+            const currentYear = now.getFullYear();
+
+            // Filter transactions for current month only
+            const currentMonthTransactions = transactions.filter(t => {
+                const transactionDate = new Date(t.date);
+                return transactionDate.getMonth() === currentMonth &&
+                    transactionDate.getFullYear() === currentYear;
+            });
+
+            const expenseList = currentMonthTransactions.filter(t => t.type === 'expense');
+            const incomeList = currentMonthTransactions.filter(t => t.type === 'income');
 
             setExpenses(expenseList);
             setIncome(incomeList);
@@ -60,15 +75,30 @@ export default function FinanceSummaryScreen() {
 
             setExpenseTotal(expTotal);
             setIncomeTotal(incTotal);
+            setIncomeTotal(incTotal);
         } catch (error) {
             console.error("Failed to fetch transactions", error);
             Sentry.captureException(error);
         }
     }, [calculateConvertedTotal]);
 
+    const [categoryMap, setCategoryMap] = useState<Map<string, Category>>(new Map());
+
+    const fetchCategories = useCallback(async () => {
+        try {
+            const categories = await categoryService.listCategories();
+            const map = new Map<string, Category>();
+            categories.forEach(c => map.set(c.id, c));
+            setCategoryMap(map);
+        } catch (error) {
+            console.error("Failed to fetch categories", error);
+        }
+    }, []);
+
     useEffect(() => {
         fetchTransactions();
-    }, [fetchTransactions]);
+        fetchCategories();
+    }, [fetchTransactions, fetchCategories]);
 
     const handleCurrencyToggle = async (newCurrency: Currency) => {
         setDisplayCurrencyState(newCurrency);
@@ -114,6 +144,7 @@ export default function FinanceSummaryScreen() {
                         data={expenses}
                         displayCurrency={displayCurrency}
                         rateType={rateType}
+                        categoryMap={categoryMap}
                     />
                     <FinanceCard
                         title="Income"
@@ -121,6 +152,7 @@ export default function FinanceSummaryScreen() {
                         data={income}
                         displayCurrency={displayCurrency}
                         rateType={rateType}
+                        categoryMap={categoryMap}
                     />
                 </View>
             </ScrollView>

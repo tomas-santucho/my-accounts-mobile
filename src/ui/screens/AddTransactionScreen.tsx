@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Alert, StatusBar, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { transactionService } from '../../services/transactionService';
 import { convertAmount, formatCurrency } from '../../services/currencyService';
 import ExchangeRateDisplay from '../lib/ExchangeRateDisplay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
+
+import CategoryListScreen from './CategoryListScreen';
+import { Category } from '../../domain/category/category';
 
 interface AddTransactionScreenProps {
     onClose: () => void;
@@ -18,9 +21,11 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
     const [type, setType] = useState<'income' | 'expense'>('expense');
     const [amount, setAmount] = useState('');
     const [description, setDescription] = useState('');
-    const [category, setCategory] = useState('');
+    const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+    const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
     const [currency, setCurrency] = useState<'usd' | 'ars'>('usd');
     const [installments, setInstallments] = useState('');
+    const [showInstallmentPicker, setShowInstallmentPicker] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [convertedAmount, setConvertedAmount] = useState<string>('');
 
@@ -51,7 +56,7 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
     }, [amount, currency]);
 
     const handleSave = async () => {
-        if (!amount || !description || !category) {
+        if (!amount || !description || !selectedCategory) {
             Alert.alert('Error', 'Please fill in all required fields');
             return;
         }
@@ -64,6 +69,12 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
 
         const numericInstallments = installments ? parseInt(installments) : undefined;
 
+        // Validate installments range
+        if (numericInstallments && (numericInstallments < 1 || numericInstallments > 24)) {
+            Alert.alert('Error', 'Installments must be between 1 and 24');
+            return;
+        }
+
         setIsSubmitting(true);
         try {
             await transactionService.addTransaction(
@@ -71,7 +82,7 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
                 type,
                 description,
                 numericAmount,
-                category,
+                selectedCategory.id,
                 new Date(),
                 currency,
                 numericInstallments
@@ -209,46 +220,182 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
                     />
                 </View>
 
-                {/* Category Input */}
+                {/* Category Selection */}
                 <View style={styles.inputGroup}>
                     <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Category</Text>
-                    <TextInput
+                    <TouchableOpacity
                         style={[
                             styles.input,
                             {
                                 backgroundColor: theme.colors.inputBackground,
-                                color: theme.colors.textPrimary,
-                                borderColor: theme.colors.border
+                                borderColor: theme.colors.border,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
                             }
                         ]}
-                        placeholder="e.g. Food, Transport, Salary"
-                        placeholderTextColor={theme.colors.placeholder}
-                        value={category}
-                        onChangeText={setCategory}
-                    />
+                        onPress={() => setIsCategoryModalVisible(true)}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            {selectedCategory ? (
+                                <>
+                                    <View style={{
+                                        width: 24,
+                                        height: 24,
+                                        borderRadius: 12,
+                                        backgroundColor: theme.colors.primary + '20',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginRight: 8
+                                    }}>
+                                        <Ionicons name={selectedCategory.icon as any} size={14} color={theme.colors.primary} />
+                                    </View>
+                                    <Text style={{ color: theme.colors.textPrimary, fontSize: 16 }}>{selectedCategory.name}</Text>
+                                </>
+                            ) : (
+                                <Text style={{ color: theme.colors.placeholder, fontSize: 16 }}>Select Category</Text>
+                            )}
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
                 </View>
+
+                <Modal
+                    visible={isCategoryModalVisible}
+                    animationType="slide"
+                    presentationStyle="pageSheet"
+                    onRequestClose={() => setIsCategoryModalVisible(false)}
+                >
+                    <CategoryListScreen
+                        onClose={() => setIsCategoryModalVisible(false)}
+                        onSelect={(category) => {
+                            setSelectedCategory(category);
+                            setIsCategoryModalVisible(false);
+                        }}
+                    />
+                </Modal>
 
                 {/* Installments (Only for Expense) */}
                 {type === 'expense' && (
                     <View style={styles.inputGroup}>
                         <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Installments (Optional)</Text>
-                        <TextInput
-                            style={[
-                                styles.input,
-                                {
-                                    backgroundColor: theme.colors.inputBackground,
-                                    color: theme.colors.textPrimary,
-                                    borderColor: theme.colors.border
-                                }
-                            ]}
-                            placeholder="Number of installments"
-                            placeholderTextColor={theme.colors.placeholder}
-                            keyboardType="number-pad"
-                            value={installments}
-                            onChangeText={setInstallments}
-                        />
+                        <View style={[
+                            styles.pickerContainer,
+                            {
+                                backgroundColor: theme.colors.inputBackground,
+                                borderColor: theme.colors.border
+                            }
+                        ]}>
+                            <TouchableOpacity
+                                style={styles.pickerButton}
+                                onPress={() => setShowInstallmentPicker(true)}
+                            >
+                                <Text style={[
+                                    styles.pickerButtonText,
+                                    { color: installments ? theme.colors.textPrimary : theme.colors.placeholder }
+                                ]}>
+                                    {installments ? `${installments} ${parseInt(installments) === 1 ? 'installment' : 'installments'}` : 'Select installments'}
+                                </Text>
+                                <Ionicons name="chevron-down" size={20} color={theme.colors.textSecondary} />
+                            </TouchableOpacity>
+                        </View>
+                        {installments && parseInt(installments) > 1 && (
+                            <View style={[styles.installmentInfo, { borderTopColor: theme.colors.border }]}>
+                                <Ionicons name="information-circle-outline" size={14} color={theme.colors.textSecondary} />
+                                <Text style={[styles.installmentInfoText, { color: theme.colors.textSecondary }]}>
+                                    {currency === 'usd' ? '$' : 'ARS'} {(parseFloat(amount || '0') / parseInt(installments)).toFixed(2)} per month
+                                </Text>
+                            </View>
+                        )}
                     </View>
                 )}
+
+                {/* Installment Picker Modal */}
+                <Modal
+                    visible={showInstallmentPicker}
+                    transparent={true}
+                    animationType="slide"
+                    onRequestClose={() => setShowInstallmentPicker(false)}
+                >
+                    <TouchableOpacity
+                        style={styles.modalOverlay}
+                        activeOpacity={1}
+                        onPress={() => setShowInstallmentPicker(false)}
+                    >
+                        <TouchableOpacity
+                            activeOpacity={1}
+                            onPress={(e) => e.stopPropagation()}
+                            style={[styles.modalContent, { backgroundColor: theme.colors.cardBackground, paddingBottom: Math.max(insets.bottom, 20) }]}
+                        >
+                            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
+                                <Text style={[styles.modalTitle, { color: theme.colors.textPrimary }]}>Select Installments</Text>
+                                <TouchableOpacity onPress={() => setShowInstallmentPicker(false)}>
+                                    <Ionicons name="close" size={24} color={theme.colors.textSecondary} />
+                                </TouchableOpacity>
+                            </View>
+                            <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.installmentOption,
+                                        { borderColor: theme.colors.border },
+                                        !installments && { backgroundColor: theme.colors.primary + '15', borderColor: theme.colors.primary }
+                                    ]}
+                                    onPress={() => {
+                                        setInstallments('');
+                                        setShowInstallmentPicker(false);
+                                    }}
+                                >
+                                    <Text style={[
+                                        styles.installmentOptionText,
+                                        { color: theme.colors.textPrimary },
+                                        !installments && { color: theme.colors.primary, fontWeight: '600' }
+                                    ]}>
+                                        No installments
+                                    </Text>
+                                    {!installments && <Ionicons name="checkmark-circle" size={20} color={theme.colors.primary} />}
+                                </TouchableOpacity>
+                                <View style={styles.installmentGrid}>
+                                    {Array.from({ length: 24 }, (_, i) => i + 1).map((num) => (
+                                        <TouchableOpacity
+                                            key={num}
+                                            style={[
+                                                styles.installmentGridItem,
+                                                {
+                                                    backgroundColor: theme.colors.inputBackground,
+                                                    borderColor: theme.colors.border
+                                                },
+                                                installments === String(num) && {
+                                                    backgroundColor: theme.colors.primary,
+                                                    borderColor: theme.colors.primary
+                                                }
+                                            ]}
+                                            onPress={() => {
+                                                setInstallments(String(num));
+                                                setShowInstallmentPicker(false);
+                                            }}
+                                        >
+                                            <Text style={[
+                                                styles.installmentGridText,
+                                                { color: theme.colors.textPrimary },
+                                                installments === String(num) && { color: '#FFF', fontWeight: '700' }
+                                            ]}>
+                                                {num}
+                                            </Text>
+                                            <Text style={[
+                                                styles.installmentGridLabel,
+                                                { color: theme.colors.textSecondary },
+                                                installments === String(num) && { color: '#FFF', opacity: 0.9 }
+                                            ]}>
+                                                {num === 1 ? 'month' : 'months'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </ScrollView>
+                        </TouchableOpacity>
+                    </TouchableOpacity>
+                </Modal>
+
 
             </ScrollView>
 
@@ -389,5 +536,99 @@ const styles = StyleSheet.create({
         color: '#FFF',
         fontSize: 16,
         fontWeight: '600',
+    },
+    pickerContainer: {
+        borderRadius: 12,
+        borderWidth: 1,
+    },
+    pickerButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 12,
+    },
+    pickerButtonText: {
+        fontSize: 16,
+        flex: 1,
+    },
+    installmentInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 6,
+        marginTop: 8,
+        paddingTop: 8,
+        borderTopWidth: 1,
+    },
+    installmentInfoText: {
+        fontSize: 14,
+        fontWeight: '500',
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'flex-end',
+    },
+    modalContent: {
+        borderTopLeftRadius: 24,
+        borderTopRightRadius: 24,
+        maxHeight: '80%',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -4 },
+        shadowOpacity: 0.1,
+        shadowRadius: 12,
+        elevation: 8,
+    },
+    modalHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 16,
+        borderBottomWidth: 1,
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: '600',
+    },
+    modalScroll: {
+        padding: 20,
+    },
+    installmentOption: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        marginBottom: 16,
+    },
+    installmentOptionText: {
+        fontSize: 16,
+        fontWeight: '500',
+    },
+    installmentGrid: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 12,
+    },
+    installmentGridItem: {
+        width: '22%',
+        aspectRatio: 1,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: 8,
+    },
+    installmentGridText: {
+        fontSize: 20,
+        fontWeight: '600',
+        marginBottom: 2,
+    },
+    installmentGridLabel: {
+        fontSize: 10,
+        fontWeight: '500',
     },
 });

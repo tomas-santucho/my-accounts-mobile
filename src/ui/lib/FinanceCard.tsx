@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList } from 'react-native';
 import { Transaction } from '../../domain/transaction/transaction';
+import { Category } from '../../domain/category/category';
 import { Currency, RateType, convertAmount, formatCurrency } from '../../services/currencyService';
 import { useTheme } from '../theme';
+import { Ionicons } from '@expo/vector-icons';
 
 interface FinanceCardProps {
     title: string;
@@ -10,6 +12,7 @@ interface FinanceCardProps {
     data: Transaction[];
     displayCurrency?: Currency;
     rateType?: RateType;
+    categoryMap?: Map<string, Category>;
 }
 
 const FinanceCard = ({
@@ -17,7 +20,8 @@ const FinanceCard = ({
     total,
     data,
     displayCurrency = 'usd',
-    rateType = 'blue'
+    rateType = 'blue',
+    categoryMap
 }: FinanceCardProps) => {
     const { theme } = useTheme();
     const [convertedAmounts, setConvertedAmounts] = useState<Map<string, number>>(new Map());
@@ -45,18 +49,21 @@ const FinanceCard = ({
     const renderItem = ({ item }: { item: Transaction }) => {
         const convertedAmount = convertedAmounts.get(item.id) || item.amount;
         const showOriginal = item.currency !== displayCurrency;
+        const category = categoryMap?.get(item.category);
+        const categoryName = category?.name || item.category;
+        const categoryIcon = category?.icon || 'help-circle';
 
         return (
             <View style={[styles.row, { borderBottomColor: theme.colors.border }]}>
-                <View style={styles.iconContainer}>
-                    <Text style={{ fontSize: 20 }}>{item.type === 'income' ? '💰' : '💸'}</Text>
+                <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary + '15', borderRadius: 20, width: 40, height: 40, justifyContent: 'center', alignItems: 'center', marginRight: 12 }]}>
+                    <Ionicons name={categoryIcon as any} size={20} color={theme.colors.primary} />
                 </View>
 
                 <View style={styles.info}>
                     <Text style={[styles.category, { color: theme.colors.textPrimary }]}>{item.description}</Text>
                     <View style={styles.values}>
                         <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Category</Text>
-                        <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{item.category}</Text>
+                        <Text style={[styles.value, { color: theme.colors.textPrimary }]}>{categoryName}</Text>
                         <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Amount</Text>
                         <View style={styles.amountContainer}>
                             <Text style={[styles.value, { color: theme.colors.textPrimary }]}>

@@ -1,34 +1,14 @@
 import React, { useState } from "react";
-import { StyleSheet, View, Text, StatusBar, Platform } from "react-native";
+import { StyleSheet, View, Text, StatusBar } from "react-native";
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import FinanceSummaryScreen from "./src/ui/screens/FinanceSummaryScreen";
 import SettingsScreen from "./src/ui/screens/SettingsScreen";
 import TransactionsScreen from "./src/ui/screens/TransactionsScreen";
 import BottomNavigation, { Tab } from "./src/ui/lib/BottomNavigation";
 import SplashScreen from "./src/ui/screens/SplashScreen";
-import * as Sentry from '@sentry/react-native';
-import { PostHogProvider } from 'posthog-react-native';
+import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { ThemeProvider, useTheme } from "./src/ui/theme";
-
-Sentry.init({
-  dsn: 'https://0c062097cd716eed51844d06da293f00@o4510410482909184.ingest.de.sentry.io/4510410485661776',
-
-  // Performance Monitoring
-  tracesSampleRate: 1.0, // Capture 100% of the transactions for testing
-
-  // Session Replay
-  replaysSessionSampleRate: 0.1,
-  replaysOnErrorSampleRate: 1.0,
-
-  // Integrations
-  integrations: [
-    ...(Platform.OS !== 'web' ? [Sentry.mobileReplayIntegration()] : []),
-    Sentry.feedbackIntegration(),
-  ],
-
-  // Debugging
-  debug: __DEV__, // Enable debug mode in development
-});
+import { errorTracking } from "./src/services/errorTracking";
 
 const MainLayout = () => {
   const { theme, isDark } = useTheme();
@@ -68,7 +48,19 @@ const MainLayout = () => {
   );
 };
 
-export default Sentry.wrap(function App() {
+const PostHogInitializer = () => {
+  const posthog = usePostHog();
+
+  React.useEffect(() => {
+    if (posthog) {
+      errorTracking.setPostHog(posthog);
+    }
+  }, [posthog]);
+
+  return null;
+};
+
+export default function App() {
   return (
     <SafeAreaProvider>
       <PostHogProvider
@@ -76,16 +68,18 @@ export default Sentry.wrap(function App() {
         options={{
           host: 'https://eu.i.posthog.com',
           enableSessionReplay: true,
+          captureAppLifecycleEvents: true,
         }}
         autocapture
       >
+        <PostHogInitializer />
         <ThemeProvider>
           <MainLayout />
         </ThemeProvider>
       </PostHogProvider>
     </SafeAreaProvider>
   );
-});
+}
 
 const PlaceholderScreen = ({ title }: { title: string }) => {
   const { theme } = useTheme();
