@@ -1,15 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Platform, StatusBar } from 'react-native';
 import Logo from './Logo';
 import { useTheme } from '../theme';
 
 interface FinanceHeaderProps {
     onAddTransaction?: () => void;
+    currency: 'USD' | 'ARS';
+    onCurrencyChange: (currency: 'USD' | 'ARS') => void;
 }
 
-export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) {
+export default function FinanceHeader({ onAddTransaction, currency, onCurrencyChange }: FinanceHeaderProps) {
     const { theme } = useTheme();
-    const [currency, setCurrency] = useState('USD');
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.primaryDark }]}>
@@ -30,27 +31,9 @@ export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) 
                     <TouchableOpacity
                         style={[
                             styles.toggleButton,
-                            currency === 'USD' && { backgroundColor: theme.colors.onPrimary }
-                        ]}
-                        onPress={() => setCurrency('USD')}
-                    >
-                        <Text
-                            style={[
-                                styles.toggleText,
-                                { color: 'rgba(255, 255, 255, 0.5)' },
-                                currency === 'USD' && { color: theme.colors.primary }
-                            ]}
-                        >
-                            USD
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        style={[
-                            styles.toggleButton,
                             currency === 'ARS' && { backgroundColor: theme.colors.onPrimary }
                         ]}
-                        onPress={() => setCurrency('ARS')}
+                        onPress={() => onCurrencyChange('ARS')}
                     >
                         <Text
                             style={[
@@ -60,6 +43,24 @@ export default function FinanceHeader({ onAddTransaction }: FinanceHeaderProps) 
                             ]}
                         >
                             ARS
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        style={[
+                            styles.toggleButton,
+                            currency === 'USD' && { backgroundColor: theme.colors.onPrimary }
+                        ]}
+                        onPress={() => onCurrencyChange('USD')}
+                    >
+                        <Text
+                            style={[
+                                styles.toggleText,
+                                { color: 'rgba(255, 255, 255, 0.5)' },
+                                currency === 'USD' && { color: theme.colors.primary }
+                            ]}
+                        >
+                            USD
                         </Text>
                     </TouchableOpacity>
                 </View>

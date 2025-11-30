@@ -1,44 +1,86 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme';
+import { Currency } from '../../services/currencyService';
 
-const MonthlyBudgetSummary = () => {
+interface MonthlyBudgetSummaryProps {
+    startingBalance: number;
+    endingBalance: number;
+    previousMonthBalance: number;
+    totalIncome: number;
+    totalExpenses: number;
+    displayCurrency: Currency;
+    onEditStartingBalance?: () => void;
+}
+
+const MonthlyBudgetSummary = ({
+    startingBalance,
+    endingBalance,
+    previousMonthBalance,
+    totalIncome,
+    totalExpenses,
+    displayCurrency,
+    onEditStartingBalance
+}: MonthlyBudgetSummaryProps) => {
     const { theme } = useTheme();
-    // mock data
-    const startingBalance = 99;
-    const endingBalance = 99;
-    const savingsIncrease = 99;
-    const savedThisMonth = 99;
-    const incomeExpended = 99;
+
+    // Calculate stats
+    const savingsIncrease = previousMonthBalance !== 0
+        ? ((endingBalance - previousMonthBalance) / Math.abs(previousMonthBalance) * 100)
+        : 0;
+
+    const totalSaved = endingBalance - startingBalance;
+
+    const incomeExpended = totalIncome > 0
+        ? (totalExpenses / totalIncome * 100)
+        : 0;
+
+    // Calculate progress bar widths
+    const startingBalancePercent = 100;
+    const endingBalancePercent = startingBalance !== 0
+        ? Math.min(Math.max((endingBalance / startingBalance * 100), 0), 100)
+        : 50; // Default to 50% if no starting balance
+
+    const currencySymbol = displayCurrency === 'usd' ? '$' : 'AR$';
 
     return (
         <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
             {/* Top balance cards */}
             <View style={styles.balanceRow}>
-                <View style={[styles.balanceCard, { backgroundColor: theme.colors.cardBackground }]}>
+                <TouchableOpacity
+                    style={[styles.balanceCard, { backgroundColor: theme.colors.cardBackground }]}
+                    onPress={onEditStartingBalance}
+                    activeOpacity={0.7}
+                >
                     <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>Starting Balance</Text>
-                    <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>${startingBalance.toLocaleString()}</Text>
+                    <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>
+                        {currencySymbol}{Math.abs(startingBalance).toLocaleString()}
+                    </Text>
                     <LinearGradient
                         colors={['#FF7A00', '#FF5B00']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
                         style={styles.gradientBar}
                     />
-                    <Text style={[styles.percent, { color: theme.colors.textSecondary }]}>100%</Text>
-                </View>
+                    <Text style={[styles.percent, { color: theme.colors.textSecondary }]}>{startingBalancePercent}%</Text>
+                </TouchableOpacity>
 
                 <View style={[styles.balanceCard, { backgroundColor: theme.colors.cardBackground }]}>
                     <Text style={[styles.balanceLabel, { color: theme.colors.textSecondary }]}>Ending Balance</Text>
-                    <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>${endingBalance.toLocaleString()}</Text>
+                    <Text style={[styles.balanceAmount, { color: theme.colors.textPrimary }]}>
+                        {currencySymbol}{Math.abs(endingBalance).toLocaleString()}
+                    </Text>
                     <LinearGradient
                         colors={['#FF7A00', '#FF5B00']}
                         start={{ x: 0, y: 0 }}
                         end={{ x: 1, y: 1 }}
-                        style={[styles.gradientBar, { width: '81%' }]}
+                        style={[styles.gradientBar, { width: `${endingBalancePercent}%` }]}
                     />
-                    <Text style={[styles.percent, { color: theme.colors.textSecondary }]}>99%</Text>
+                    <Text style={[styles.percent, { color: theme.colors.textSecondary }]}>
+                        {endingBalancePercent.toFixed(0)}%
+                    </Text>
                 </View>
             </View>
 
@@ -52,8 +94,12 @@ const MonthlyBudgetSummary = () => {
                     </View>
                     <View style={styles.summaryText}>
                         <Text style={[styles.summaryLabel, { color: theme.colors.textPrimary }]}>Savings Increase</Text>
-                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>+{savingsIncrease}%</Text>
-                        <Text style={styles.subText}>vs last month</Text>
+                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>
+                            {savingsIncrease >= 0 ? '+' : ''}{savingsIncrease.toFixed(1)}%
+                        </Text>
+                        <Text style={[styles.subText, { color: savingsIncrease >= 0 ? '#2ECC71' : '#E74C3C' }]}>
+                            vs last month
+                        </Text>
                     </View>
                 </View>
 
@@ -65,7 +111,9 @@ const MonthlyBudgetSummary = () => {
                     </View>
                     <View style={styles.summaryText}>
                         <Text style={[styles.summaryLabel, { color: theme.colors.textPrimary }]}>Total Saved This Month</Text>
-                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>${savedThisMonth.toLocaleString()}</Text>
+                        <Text style={[styles.summaryValue, { color: totalSaved >= 0 ? theme.colors.success : theme.colors.error }]}>
+                            {totalSaved >= 0 ? '+' : ''}{currencySymbol}{Math.abs(totalSaved).toLocaleString()}
+                        </Text>
                     </View>
                 </View>
 
@@ -77,7 +125,9 @@ const MonthlyBudgetSummary = () => {
                     </View>
                     <View style={styles.summaryText}>
                         <Text style={[styles.summaryLabel, { color: theme.colors.textPrimary }]}>Income Expended</Text>
-                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>{incomeExpended}%</Text>
+                        <Text style={[styles.summaryValue, { color: theme.colors.textPrimary }]}>
+                            {incomeExpended.toFixed(1)}%
+                        </Text>
                         <Text style={[styles.subText, { color: '#FF5B00' }]}>of total income</Text>
                     </View>
                 </View>

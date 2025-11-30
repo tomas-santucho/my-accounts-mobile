@@ -9,6 +9,7 @@ import SplashScreen from "./src/ui/screens/SplashScreen";
 import { PostHogProvider, usePostHog } from 'posthog-react-native';
 import { ThemeProvider, useTheme } from "./src/ui/theme";
 import { errorTracking } from "./src/services/errorTracking";
+import { AuthProvider } from "./src/context/AuthContext";
 
 const MainLayout = () => {
   const { theme, isDark } = useTheme();
@@ -74,7 +75,9 @@ export default function App() {
       >
         <PostHogInitializer />
         <ThemeProvider>
-          <MainLayout />
+          <AuthProvider>
+            <MainLayout />
+          </AuthProvider>
         </ThemeProvider>
       </PostHogProvider>
     </SafeAreaProvider>

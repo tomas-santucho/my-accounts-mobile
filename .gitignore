@@ -1,4 +1,6 @@
 # Node
+!.env.development
+!.env.production
 node_modules/
 npm-debug.*
 yarn-debug.log*
@@ -73,3 +75,10 @@ expo-debug.log
 *.bak
 
 .env.local
+
+# Environment variables
+.env
+.env.*
+!.env.development
+!.env.production
+

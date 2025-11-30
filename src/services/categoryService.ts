@@ -22,6 +22,8 @@ export const categoryService = {
         isDefault?: boolean
     ) => CategoryUseCases.addCategory(repository, name, icon, type, color, isDefault),
     listCategories: () => CategoryUseCases.listCategories(repository),
+    getCategory: (id: string) => repository.getCategory(id),
     editCategory: (category: Category) => CategoryUseCases.editCategory(repository, category),
     deleteCategory: (id: string) => CategoryUseCases.deleteCategory(repository, id),
+    seedDefaultCategories: () => CategoryUseCases.seedDefaultCategories(repository),
 };

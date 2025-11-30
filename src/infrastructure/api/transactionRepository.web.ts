@@ -2,7 +2,7 @@ import { TransactionRepository } from "../../domain/transaction/transactionRepos
 import { Transaction } from "../../domain/transaction/transaction";
 import * as Sentry from '@sentry/react-native';
 
-const API_URL = "http://localhost:8080/api/transactions";
+const API_URL = `${process.env.EXPO_PUBLIC_API_URL}api/transactions`;
 
 export const createWebTransactionRepository = (): TransactionRepository => ({
     async getTransactions(): Promise<Transaction[]> {
@@ -19,7 +19,7 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
                 createdAt: new Date(t.createdAt)
             }));
         } catch (error) {
-            console.error("Error fetching transactions. Ensure backend is running at http://localhost:8080 and CORS is configured.", error);
+            console.error(`Error fetching transactions. Ensure backend is running at ${process.env.EXPO_PUBLIC_API_URL} and CORS is configured.`, error);
             Sentry.captureException(error);
             return [];
         }

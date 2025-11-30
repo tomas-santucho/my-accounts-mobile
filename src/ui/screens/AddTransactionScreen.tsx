@@ -7,25 +7,53 @@ import ExchangeRateDisplay from '../lib/ExchangeRateDisplay';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../theme';
 
+import { categoryService } from '../../services/categoryService';
 import CategoryListScreen from './CategoryListScreen';
 import { Category } from '../../domain/category/category';
+
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
+import { Transaction } from '../../domain/transaction/transaction';
 
 interface AddTransactionScreenProps {
     onClose: () => void;
     onSave: () => void;
+    transaction?: Transaction;
 }
 
-export default function AddTransactionScreen({ onClose, onSave }: AddTransactionScreenProps) {
+export default function AddTransactionScreen({ onClose, onSave, transaction }: AddTransactionScreenProps) {
     const insets = useSafeAreaInsets();
     const { theme } = useTheme();
-    const [type, setType] = useState<'income' | 'expense'>('expense');
-    const [amount, setAmount] = useState('');
-    const [description, setDescription] = useState('');
-    const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+    const [type, setType] = useState<'income' | 'expense'>(transaction?.type || 'expense');
+    const [amount, setAmount] = useState(transaction?.amount.toString() || '');
+    const [description, setDescription] = useState(transaction?.description || '');
+    const [selectedCategory, setSelectedCategory] = useState<Category | null>(null); // We'll need to fetch this or pass it fully
     const [isCategoryModalVisible, setIsCategoryModalVisible] = useState(false);
-    const [currency, setCurrency] = useState<'usd' | 'ars'>('usd');
-    const [installments, setInstallments] = useState('');
+    const [currency, setCurrency] = useState<'usd' | 'ars'>(transaction?.currency || 'usd');
+    const [installments, setInstallments] = useState(transaction?.installments?.toString() || '');
     const [showInstallmentPicker, setShowInstallmentPicker] = useState(false);
+    const [date, setDate] = useState(transaction?.date || new Date());
+    const [showDatePicker, setShowDatePicker] = useState(false);
+
+    // If editing an installment, we might want to know if we should update all
+    const isEditing = !!transaction;
+    const isInstallment = !!transaction?.installmentGroupId;
+
+    useEffect(() => {
+        if (transaction) {
+            const fetchCategory = async () => {
+                try {
+                    const category = await categoryService.getCategory(transaction.category);
+                    if (category) {
+                        setSelectedCategory(category);
+                    }
+                } catch (error) {
+                    console.error("Failed to fetch category", error);
+                }
+            };
+            fetchCategory();
+        }
+    }, [transaction]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [convertedAmount, setConvertedAmount] = useState<string>('');
 
@@ -56,9 +84,13 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
     }, [amount, currency]);
 
     const handleSave = async () => {
-        if (!amount || !description || !selectedCategory) {
-            Alert.alert('Error', 'Please fill in all required fields');
-            return;
+        if (!amount || !description || (!selectedCategory && !isEditing)) { // Allow null category if editing and not changing? No, we need it.
+            // If editing and category is null, it means we didn't pre-fill it. We MUST pre-fill it.
+            // I'll handle category pre-filling in a separate useEffect with a direct repo call or service.
+            if (!selectedCategory) {
+                Alert.alert('Error', 'Please select a category');
+                return;
+            }
         }
 
         const numericAmount = parseFloat(amount);
@@ -77,23 +109,69 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
 
         setIsSubmitting(true);
         try {
-            await transactionService.addTransaction(
-                'user-123', // Hardcoded user ID for now
-                type,
-                description,
-                numericAmount,
-                selectedCategory.id,
-                new Date(),
-                currency,
-                numericInstallments
-            );
+            if (isEditing && transaction) {
+                const updatedTransaction: Transaction = {
+                    ...transaction,
+                    type,
+                    description,
+                    amount: numericAmount,
+                    category: selectedCategory!.id,
+                    date: date,
+                    currency,
+                    // We don't update installments count for now as per plan
+                };
+
+                if (isInstallment) {
+                    Alert.alert(
+                        "Update Installments",
+                        "Do you want to update this installment only, or all installments in the group?",
+                        [
+                            {
+                                text: "This Only",
+                                onPress: async () => {
+                                    await transactionService.updateTransaction(updatedTransaction, 'single');
+                                    onSave();
+                                    onClose();
+                                }
+                            },
+                            {
+                                text: "All Installments",
+                                onPress: async () => {
+                                    await transactionService.updateTransaction(updatedTransaction, 'all-installments');
+                                    onSave();
+                                    onClose();
+                                }
+                            },
+                            {
+                                text: "Cancel",
+                                style: "cancel",
+                                onPress: () => setIsSubmitting(false)
+                            }
+                        ]
+                    );
+                    return; // Wait for alert response
+                } else {
+                    await transactionService.updateTransaction(updatedTransaction, 'single');
+                }
+            } else {
+                await transactionService.addTransaction(
+                    'user-123', // Hardcoded user ID for now
+                    type,
+                    description,
+                    numericAmount,
+                    selectedCategory!.id,
+                    date,
+                    currency,
+                    numericInstallments
+                );
+            }
             onSave();
             onClose();
         } catch (error) {
             console.error(error);
             Alert.alert('Error', 'Failed to save transaction');
         } finally {
-            setIsSubmitting(false);
+            if (!isInstallment) setIsSubmitting(false);
         }
     };
 
@@ -104,7 +182,7 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
                 <TouchableOpacity onPress={onClose} style={styles.closeButton}>
                     <Ionicons name="close" size={24} color={theme.colors.textPrimary} />
                 </TouchableOpacity>
-                <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>Add Transaction</Text>
+                <Text style={[styles.headerTitle, { color: theme.colors.textPrimary }]}>{isEditing ? 'Edit Transaction' : 'Add Transaction'}</Text>
                 <View style={{ width: 24 }} />
             </View>
 
@@ -137,6 +215,42 @@ export default function AddTransactionScreen({ onClose, onSave }: AddTransaction
                             type === 'income' && { color: theme.colors.textPrimary, fontWeight: '600' }
                         ]}>Income</Text>
                     </TouchableOpacity>
+                </View>
+
+                {/* Date Picker */}
+                <View style={styles.inputGroup}>
+                    <Text style={[styles.label, { color: theme.colors.textSecondary }]}>Date</Text>
+                    <TouchableOpacity
+                        style={[
+                            styles.input,
+                            {
+                                backgroundColor: theme.colors.inputBackground,
+                                borderColor: theme.colors.border,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between'
+                            }
+                        ]}
+                        onPress={() => setShowDatePicker(true)}
+                    >
+                        <Text style={{ color: theme.colors.textPrimary, fontSize: 16 }}>
+                            {date.toLocaleDateString()}
+                        </Text>
+                        <Ionicons name="calendar" size={20} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                    {showDatePicker && (
+                        <DateTimePicker
+                            value={date}
+                            mode="date"
+                            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                            onChange={(event, selectedDate) => {
+                                setShowDatePicker(false);
+                                if (selectedDate) {
+                                    setDate(selectedDate);
+                                }
+                            }}
+                        />
+                    )}
                 </View>
 
                 {/* Amount Input */}

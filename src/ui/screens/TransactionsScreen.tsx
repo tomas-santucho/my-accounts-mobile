@@ -11,6 +11,8 @@ import FilterModal, { SortOption } from '../lib/FilterModal';
 import ConfirmDialog from '../lib/ConfirmDialog';
 import InstallmentDeleteDialog from '../lib/InstallmentDeleteDialog';
 import * as Sentry from '@sentry/react-native';
+import { convertAmount, Currency } from '../../services/currencyService';
+import { getCurrencyPreferences } from '../../config/currencyPreferences';
 
 export default function TransactionsScreen() {
     const { theme } = useTheme();
@@ -20,10 +22,13 @@ export default function TransactionsScreen() {
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [rateType, setRateType] = useState<'blue' | 'official'>('blue');
+    const [totalIncome, setTotalIncome] = useState(0);
+    const [totalExpense, setTotalExpense] = useState(0);
 
     // Filter states
-    const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
-    const [selectedYear, setSelectedYear] = useState<number | null>(null);
+    const [selectedMonth, setSelectedMonth] = useState<number | null>(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [sortBy, setSortBy] = useState<SortOption>('date-desc');
 
@@ -33,8 +38,16 @@ export default function TransactionsScreen() {
 
     // Delete states
     const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+    const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
     const [showConfirmDelete, setShowConfirmDelete] = useState(false);
     const [showInstallmentDelete, setShowInstallmentDelete] = useState(false);
+
+    useEffect(() => {
+        // Load currency preferences
+        getCurrencyPreferences().then(prefs => {
+            setRateType(prefs.rateType);
+        });
+    }, []);
 
     const fetchCategories = useCallback(async () => {
         try {
@@ -136,14 +149,38 @@ export default function TransactionsScreen() {
         return filtered;
     }, [transactions, searchQuery, selectedMonth, selectedYear, selectedCategories, sortBy, categoryMap]);
 
-    // Calculate totals from filtered transactions
-    const totalIncome = filteredTransactions
-        .filter(t => t.type === 'income' && t.currency.toUpperCase() === currency)
-        .reduce((acc, t) => acc + t.amount, 0);
+    // Convert currency helper
+    const calculateConvertedTotal = useCallback(async (transactionsList: Transaction[]) => {
+        let total = 0;
+        const displayCurrency: Currency = currency === 'USD' ? 'usd' : 'ars';
 
-    const totalExpense = filteredTransactions
-        .filter(t => t.type === 'expense' && t.currency.toUpperCase() === currency)
-        .reduce((acc, t) => acc + t.amount, 0);
+        for (const t of transactionsList) {
+            const converted = await convertAmount(
+                t.amount,
+                t.currency,
+                displayCurrency,
+                rateType
+            );
+            total += converted;
+        }
+        return total;
+    }, [currency, rateType]);
+
+    // Calculate totals from filtered transactions with conversion
+    useEffect(() => {
+        const updateTotals = async () => {
+            const incomeTransactions = filteredTransactions.filter(t => t.type === 'income');
+            const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense');
+
+            const incomeTotal = await calculateConvertedTotal(incomeTransactions);
+            const expenseTotal = await calculateConvertedTotal(expenseTransactions);
+
+            setTotalIncome(incomeTotal);
+            setTotalExpense(expenseTotal);
+        };
+
+        updateTotals();
+    }, [filteredTransactions, calculateConvertedTotal]);
 
     const netBalance = totalIncome - totalExpense;
 
@@ -228,6 +265,11 @@ export default function TransactionsScreen() {
         setTransactionToDelete(null);
     };
 
+    const handleEditPress = (transaction: Transaction) => {
+        setTransactionToEdit(transaction);
+        setIsAddModalVisible(true);
+    };
+
     const getIconForCategory = (categoryIdOrName: string) => {
         // Check if it's an ID
         const category = categoryMap.get(categoryIdOrName);
@@ -256,11 +298,16 @@ export default function TransactionsScreen() {
                 onRequestClose={() => setIsAddModalVisible(false)}
             >
                 <AddTransactionScreen
-                    onClose={() => setIsAddModalVisible(false)}
+                    onClose={() => {
+                        setIsAddModalVisible(false);
+                        setTransactionToEdit(null);
+                    }}
                     onSave={() => {
                         fetchTransactions();
                         setIsAddModalVisible(false);
+                        setTransactionToEdit(null);
                     }}
+                    transaction={transactionToEdit || undefined}
                 />
             </Modal>
 
@@ -388,6 +435,7 @@ export default function TransactionsScreen() {
                                             <View style={styles.transactionItem}>
                                                 <TouchableOpacity
                                                     style={styles.transactionContent}
+                                                    onPress={() => handleEditPress(item)}
                                                     onLongPress={() => handleDeletePress(item)}
                                                 >
                                                     <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>

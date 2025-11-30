@@ -1,7 +1,10 @@
-{
+import 'dotenv/config';
+
+export default {
   "expo": {
     "name": "my-accounts",
     "slug": "my-accounts",
+    "scheme": "my-accounts",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -31,7 +34,8 @@
     "extra": {
       "eas": {
         "projectId": "a2d05329-5930-4e7c-a64e-56507831675d"
-      }
+      },
+      "API_URL": process.env.API_URL
     },
     "plugins": [
       [
