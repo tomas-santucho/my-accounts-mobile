@@ -1,15 +1,27 @@
 import { CategoryRepository } from "../../domain/category/categoryRepository";
 import { Category } from "../../domain/category/category";
-
+import { fetchAuthSession } from 'aws-amplify/auth';
 import * as Sentry from '@sentry/react-native';
 
 const API_URL = `${process.env.EXPO_PUBLIC_API_URL}api/categories`;
+
+const getAuthHeaders = async () => {
+    const session = await fetchAuthSession();
+    const token = session.tokens?.accessToken?.toString();
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+    };
+};
 
 export const createWebCategoryRepository = (): CategoryRepository => {
     return {
         async getCategories(): Promise<Category[]> {
             try {
-                const response = await fetch(API_URL);
+                const headers = await getAuthHeaders();
+                const response = await fetch(API_URL, {
+                    headers
+                });
                 if (!response.ok) {
                     throw new Error(`Failed to fetch categories: ${response.statusText}`);
                 }
@@ -24,7 +36,10 @@ export const createWebCategoryRepository = (): CategoryRepository => {
 
         async getCategory(id: string): Promise<Category | null> {
             try {
-                const response = await fetch(`${API_URL}/${id}`);
+                const headers = await getAuthHeaders();
+                const response = await fetch(`${API_URL}/${id}`, {
+                    headers
+                });
                 if (!response.ok) {
                     if (response.status === 404) return null;
                     throw new Error(`Failed to fetch category: ${response.statusText}`);
@@ -40,11 +55,10 @@ export const createWebCategoryRepository = (): CategoryRepository => {
 
         async addCategory(category: Category): Promise<void> {
             try {
+                const headers = await getAuthHeaders();
                 const response = await fetch(API_URL, {
                     method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers,
                     body: JSON.stringify(category),
                 });
                 if (!response.ok) {
@@ -59,11 +73,10 @@ export const createWebCategoryRepository = (): CategoryRepository => {
 
         async updateCategory(category: Category): Promise<void> {
             try {
+                const headers = await getAuthHeaders();
                 const response = await fetch(`${API_URL}/${category.id}`, {
                     method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                    headers,
                     body: JSON.stringify(category),
                 });
                 if (!response.ok) {
@@ -78,8 +91,10 @@ export const createWebCategoryRepository = (): CategoryRepository => {
 
         async deleteCategory(id: string): Promise<void> {
             try {
+                const headers = await getAuthHeaders();
                 const response = await fetch(`${API_URL}/${id}`, {
                     method: "DELETE",
+                    headers
                 });
                 if (!response.ok) {
                     throw new Error(`Failed to delete category: ${response.statusText}`);

@@ -35,7 +35,7 @@ export default {
       "eas": {
         "projectId": "a2d05329-5930-4e7c-a64e-56507831675d"
       },
-      "API_URL": process.env.API_URL
+      "API_URL": process.env.API_URL || process.env.EXPO_PUBLIC_API_URL
     },
     "plugins": [
       [

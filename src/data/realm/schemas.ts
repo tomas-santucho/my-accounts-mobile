@@ -15,6 +15,9 @@ export type Transaction = {
     installmentNumber?: number; // Which installment this is (1/12, 2/12, etc.)
     date: Date;
     createdAt: Date;
+    updatedAt: Date;
+    deletedAt?: Date | null;
+    isSynced: boolean;
 }
 
 export type Category = {
@@ -24,6 +27,9 @@ export type Category = {
     type: "income" | "expense";
     color?: string;
     isDefault?: boolean;
+    updatedAt: Date;
+    deletedAt?: Date | null;
+    isSynced: boolean;
 }
 
 // Realm class for mobile only
@@ -40,6 +46,9 @@ export const TransactionSchema = Platform.OS !== "web" ? class Transaction exten
     installmentNumber?: number;
     date!: Date;
     createdAt!: Date;
+    updatedAt!: Date;
+    deletedAt?: Date | null;
+    isSynced!: boolean;
 
     static readonly schema: Realm.ObjectSchema = {
         name: "Transaction",
@@ -56,6 +65,9 @@ export const TransactionSchema = Platform.OS !== "web" ? class Transaction exten
             installmentNumber: "int?",
             date: "date",
             createdAt: "date",
+            updatedAt: "date",
+            deletedAt: "date?",
+            isSynced: { type: "bool", default: false },
         },
         primaryKey: "id",
     }
@@ -68,6 +80,9 @@ export const CategorySchema = Platform.OS !== "web" ? class Category extends Rea
     type!: "income" | "expense";
     color?: string;
     isDefault?: boolean;
+    updatedAt!: Date;
+    deletedAt?: Date | null;
+    isSynced!: boolean;
 
     static readonly schema: Realm.ObjectSchema = {
         name: "Category",
@@ -78,6 +93,9 @@ export const CategorySchema = Platform.OS !== "web" ? class Category extends Rea
             type: "string",
             color: "string?",
             isDefault: "bool?",
+            updatedAt: "date",
+            deletedAt: "date?",
+            isSynced: { type: "bool", default: false },
         },
         primaryKey: "id",
     }

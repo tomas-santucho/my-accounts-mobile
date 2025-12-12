@@ -1,13 +1,26 @@
 import { TransactionRepository } from "../../domain/transaction/transactionRepository";
 import { Transaction } from "../../domain/transaction/transaction";
+import { fetchAuthSession } from 'aws-amplify/auth';
 import * as Sentry from '@sentry/react-native';
 
-const API_URL = `${process.env.EXPO_PUBLIC_API_URL}api/transactions`;
+const API_URL = `${process.env["EXPO_PUBLIC_API_URL"]}api/transactions`;
+
+const getAuthHeaders = async () => {
+    const session = await fetchAuthSession();
+    const token = session.tokens?.accessToken?.toString();
+    return {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+    };
+};
 
 export const createWebTransactionRepository = (): TransactionRepository => ({
     async getTransactions(): Promise<Transaction[]> {
         try {
-            const response = await fetch(API_URL);
+            const headers = await getAuthHeaders();
+            const response = await fetch(API_URL, {
+                headers
+            });
             if (!response.ok) {
                 throw new Error(`Failed to fetch transactions: ${response.statusText}`);
             }
@@ -19,7 +32,7 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
                 createdAt: new Date(t.createdAt)
             }));
         } catch (error) {
-            console.error(`Error fetching transactions. Ensure backend is running at ${process.env.EXPO_PUBLIC_API_URL} and CORS is configured.`, error);
+            console.error(`Error fetching transactions. Ensure backend is running at ${process.env["EXPO_PUBLIC_API_URL"]} and CORS is configured.`, error);
             Sentry.captureException(error);
             return [];
         }
@@ -27,7 +40,10 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
 
     async getTransaction(id: string): Promise<Transaction | null> {
         try {
-            const response = await fetch(`${API_URL}/${id}`);
+            const headers = await getAuthHeaders();
+            const response = await fetch(`${API_URL}/${id}`, {
+                headers
+            });
             if (!response.ok) {
                 if (response.status === 404) return null;
                 throw new Error(`Failed to fetch transaction: ${response.statusText}`);
@@ -47,11 +63,10 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
 
     async addTransaction(transaction: Transaction): Promise<void> {
         try {
+            const headers = await getAuthHeaders();
             const response = await fetch(API_URL, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers,
                 body: JSON.stringify(transaction),
             });
             if (!response.ok) {
@@ -66,11 +81,10 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
 
     async updateTransaction(transaction: Transaction): Promise<void> {
         try {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_URL}/${transaction.id}`, {
                 method: "PUT",
-                headers: {
-                    "Content-Type": "application/json",
-                },
+                headers,
                 body: JSON.stringify(transaction),
             });
             if (!response.ok) {
@@ -85,8 +99,10 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
 
     async deleteTransaction(id: string): Promise<void> {
         try {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_URL}/${id}`, {
                 method: "DELETE",
+                headers
             });
             if (!response.ok) {
                 throw new Error(`Failed to delete transaction: ${response.statusText}`);
@@ -100,8 +116,10 @@ export const createWebTransactionRepository = (): TransactionRepository => ({
 
     async deleteTransactionsByInstallmentGroup(installmentGroupId: string): Promise<void> {
         try {
+            const headers = await getAuthHeaders();
             const response = await fetch(`${API_URL}/installment-group/${installmentGroupId}`, {
                 method: "DELETE",
+                headers
             });
             if (!response.ok) {
                 throw new Error(`Failed to delete installment group: ${response.statusText}`);

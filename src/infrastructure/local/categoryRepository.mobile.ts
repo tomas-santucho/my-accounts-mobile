@@ -15,27 +15,27 @@ export const createMobileCategoryRepository = (): CategoryRepository => {
     return {
         async getCategories(): Promise<Category[]> {
             const db = await getDb();
-            const results = db.objects<Category>("Category");
-            return results.map(c => ({ ...c }));
+            const results = db.objects("Category").filtered("deletedAt == null");
+            return results.map((c: any) => ({ ...c } as Category));
         },
 
         async getCategory(id: string): Promise<Category | null> {
             const db = await getDb();
-            const category = db.objectForPrimaryKey<Category>("Category", id);
-            return category ? { ...category } : null;
+            const category = db.objectForPrimaryKey("Category", id);
+            return (category && !(category as any).deletedAt) ? { ...category } as Category : null;
         },
 
         async addCategory(category: Category): Promise<void> {
             const db = await getDb();
             db.write(() => {
-                db.create("Category", category);
+                db.create("Category", { ...category, isSynced: false });
             });
         },
 
         async updateCategory(category: Category): Promise<void> {
             const db = await getDb();
             db.write(() => {
-                db.create("Category", category, Realm.UpdateMode.Modified);
+                db.create("Category", { ...category, updatedAt: new Date(), isSynced: false }, Realm.UpdateMode.Modified);
             });
         },
 
@@ -44,9 +44,48 @@ export const createMobileCategoryRepository = (): CategoryRepository => {
             const category = db.objectForPrimaryKey("Category", id);
             if (category) {
                 db.write(() => {
-                    db.delete(category);
+                    (category as any).deletedAt = new Date();
+                    (category as any).updatedAt = new Date();
+                    (category as any).isSynced = false;
                 });
             }
         },
+
+        async getDirtyCategories(): Promise<Category[]> {
+            const db = await getDb();
+            const results = db.objects("Category").filtered("isSynced == false");
+            return results.map((c: any) => ({ ...c } as Category));
+        },
+
+        async markAsSynced(ids: string[]): Promise<void> {
+            const db = await getDb();
+            const categories = db.objects("Category").filtered("id IN $0", ids);
+            db.write(() => {
+                for (const c of categories) {
+                    (c as any).isSynced = true;
+                }
+            });
+        },
+
+        async upsertCategories(categories: Category[]): Promise<void> {
+            const db = await getDb();
+            db.write(() => {
+                for (const c of categories) {
+                    const existing = db.objectForPrimaryKey("Category", c.id);
+
+                    if (existing) {
+                        const existingUpdatedAt = (existing as any).updatedAt;
+                        const incomingUpdatedAt = new Date(c.updatedAt);
+                        if (existingUpdatedAt >= incomingUpdatedAt) {
+                            // Local is newer or same, skip overwriting
+                            continue;
+                        }
+                    }
+
+                    // When pulling from server, we mark as synced
+                    db.create("Category", { ...c, isSynced: true }, Realm.UpdateMode.Modified);
+                }
+            });
+        }
     };
 };

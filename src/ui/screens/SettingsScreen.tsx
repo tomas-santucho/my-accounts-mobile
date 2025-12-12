@@ -11,6 +11,7 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import Constants from 'expo-constants';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { syncService } from '../../services/sync/syncService';
 
 export default function SettingsScreen() {
     const { theme, isDark, setThemeMode, themeMode } = useTheme();
@@ -30,6 +31,17 @@ export default function SettingsScreen() {
     useEffect(() => {
         loadPreferences();
     }, []);
+
+    // Close auth modal when user successfully logs in
+    useEffect(() => {
+        if (user && isAuthModalVisible) {
+            setIsAuthModalVisible(false);
+            // Clear form fields
+            setEmail('');
+            setPassword('');
+            setName('');
+        }
+    }, [user]);
 
     const loadPreferences = async () => {
         const prefs = await getCurrencyPreferences();
@@ -94,7 +106,7 @@ export default function SettingsScreen() {
         }
     };
 
-    const handleSync = () => {
+    const handleSync = async () => {
         if (!user) {
             Alert.alert('Login Required', 'You must be logged in to sync your data.', [
                 { text: 'Cancel', style: 'cancel' },
@@ -108,8 +120,20 @@ export default function SettingsScreen() {
             return;
         }
 
-        // Placeholder for sync logic
-        Alert.alert('Sync', 'Syncing data with cloud...');
+        try {
+            const userId = user.attributes?.sub || user.username;
+            if (!userId) {
+                Alert.alert('Error', 'Could not determine user ID.');
+                return;
+            }
+
+            Alert.alert('Syncing', 'Syncing data with cloud...');
+            await syncService.sync(userId);
+            Alert.alert('Success', 'Data synced successfully!');
+        } catch (error: any) {
+            console.error("Sync error:", error);
+            Alert.alert('Sync Failed', error.message || 'An error occurred during sync.');
+        }
     };
 
     const handleExport = async () => {
@@ -197,10 +221,10 @@ export default function SettingsScreen() {
                         </View>
                         <View style={styles.profileInfo}>
                             <Text style={[styles.profileName, { color: theme.colors.textPrimary }]}>
-                                {user.signInDetails?.loginId || user.username || 'User'}
+                                {user.attributes?.name || user.attributes?.email?.split('@')[0] || user.username || 'User'}
                             </Text>
                             <Text style={[styles.profileEmail, { color: theme.colors.textSecondary }]}>
-                                {user.signInDetails?.loginId || 'Logged In'}
+                                {user.attributes?.email || user.signInDetails?.loginId || 'Logged In'}
                             </Text>
                         </View>
                         <TouchableOpacity style={styles.editButton}>
@@ -348,22 +372,24 @@ export default function SettingsScreen() {
 
             <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.colors.textSecondary }]}>Data & Sync</Text>
-                <TouchableOpacity
-                    style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
-                    activeOpacity={0.7}
-                    onPress={handleSync}
-                >
-                    <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#0D47A1' : '#E3F2FD' }]}>
-                        <Ionicons name="cloud-upload-outline" size={22} color="#4A90E2" />
-                    </View>
-                    <View style={styles.settingContent}>
-                        <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Sync with Database</Text>
-                        <Text style={[styles.settingSubLabel, { color: theme.colors.textSecondary }]}>
-                            {user ? 'Backup your data to the cloud' : 'Login required'}
-                        </Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
-                </TouchableOpacity>
+                {Platform.OS !== 'web' && (
+                    <TouchableOpacity
+                        style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}
+                        activeOpacity={0.7}
+                        onPress={handleSync}
+                    >
+                        <View style={[styles.settingIconContainer, { backgroundColor: isDark ? '#0D47A1' : '#E3F2FD' }]}>
+                            <Ionicons name="cloud-upload-outline" size={22} color="#4A90E2" />
+                        </View>
+                        <View style={styles.settingContent}>
+                            <Text style={[styles.settingLabel, { color: theme.colors.textPrimary }]}>Sync with Database</Text>
+                            <Text style={[styles.settingSubLabel, { color: theme.colors.textSecondary }]}>
+                                {user ? 'Backup your data to the cloud' : 'Login required'}
+                            </Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={20} color={theme.colors.textSecondary} />
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity
                     style={[styles.settingItem, { backgroundColor: theme.colors.cardBackground }]}

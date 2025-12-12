@@ -14,7 +14,7 @@ export const openRealm = async () => {
   }
   return await Realm.open({
     schema: [TransactionSchema, CategorySchema],
-    schemaVersion: 3, // Incremented for CategorySchema
+    schemaVersion: 4, // Incremented for CategorySchema sync fields
     migration: (_oldRealm: any, _newRealm: any) => {
       // No data transformation needed - new fields are optional
       // Realm will automatically add the new properties

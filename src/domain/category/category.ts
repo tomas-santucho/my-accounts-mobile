@@ -9,6 +9,8 @@ export const CategorySchema = z.object({
     type: z.enum(["income", "expense"]),
     color: z.string().optional(),
     isDefault: z.boolean().optional(),
+    updatedAt: z.date(),
+    deletedAt: z.date().optional().nullable(),
 });
 
 export type Category = z.infer<typeof CategorySchema>;
@@ -27,6 +29,7 @@ export const createCategory = (
         type,
         color,
         isDefault,
+        updatedAt: new Date(),
     };
 
     return CategorySchema.parse(category);

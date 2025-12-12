@@ -6,4 +6,7 @@ export interface CategoryRepository {
     addCategory(category: Category): Promise<void>;
     updateCategory(category: Category): Promise<void>;
     deleteCategory(id: string): Promise<void>;
+    getDirtyCategories?(): Promise<Category[]>;
+    markAsSynced?(ids: string[]): Promise<void>;
+    upsertCategories?(categories: Category[]): Promise<void>;
 }

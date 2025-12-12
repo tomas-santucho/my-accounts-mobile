@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Amplify } from 'aws-amplify';
-import { getCurrentUser, signIn, signOut, signUp, fetchAuthSession, signInWithRedirect, fetchUserAttributes, SignInInput, SignUpInput } from 'aws-amplify/auth';
+import { getCurrentUser, signIn, signOut, signUp, fetchAuthSession, signInWithRedirect, SignInInput, SignUpInput } from 'aws-amplify/auth';
 import { Hub } from 'aws-amplify/utils';
 import { authConfig } from '../config/auth';
 
@@ -41,24 +41,31 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        console.log('[AuthContext] Component mounted, checking for user...');
         checkUser();
 
         // Listen for auth events (important for OAuth redirect)
         const hubListener = Hub.listen('auth', ({ payload }) => {
-            console.log('Auth Hub Event:', payload.event);
+            console.log('[AuthContext] Auth Hub Event:', payload.event, payload);
             switch (payload.event) {
                 case 'signInWithRedirect':
-                    console.log('OAuth sign-in successful, checking user...');
+                    console.log('[AuthContext] OAuth sign-in successful, checking user...');
                     checkUser();
                     break;
                 case 'signInWithRedirect_failure':
-                    console.error('OAuth sign-in failed:', payload.data);
+                    console.error('[AuthContext] OAuth sign-in failed:', payload.data);
                     setUser(null);
                     setIsLoading(false);
                     break;
                 case 'customOAuthState':
-                    console.log('Custom OAuth state:', payload.data);
+                    console.log('[AuthContext] Custom OAuth state:', payload.data);
                     checkUser();
+                    break;
+                case 'tokenRefresh':
+                    console.log('[AuthContext] Token refreshed');
+                    break;
+                case 'tokenRefresh_failure':
+                    console.error('[AuthContext] Token refresh failed:', payload.data);
                     break;
             }
         });
@@ -67,14 +74,34 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }, []);
 
     const checkUser = async () => {
+        console.log('[AuthContext] checkUser() called');
         try {
+            console.log('[AuthContext] Attempting to get current user...');
             const currentUser = await getCurrentUser();
-            const attributes = await fetchUserAttributes();
-            setUser({ ...currentUser, attributes });
+            console.log('[AuthContext] Current user found:', currentUser);
+
+            console.log('[AuthContext] Fetching auth session for ID token...');
+            const session = await fetchAuthSession();
+            console.log('[AuthContext] Session fetched:', session);
+
+            // Extract attributes from ID token payload instead of calling fetchUserAttributes
+            const idToken = session.tokens?.idToken;
+            const attributes = idToken?.payload ? {
+                email: idToken.payload['email'] as string,
+                name: idToken.payload['name'] as string,
+                sub: idToken.payload['sub'] as string,
+            } : {};
+            console.log('[AuthContext] User attributes from ID token:', attributes);
+
+            const userData = { ...currentUser, attributes };
+            setUser(userData);
+            console.log('[AuthContext] User state updated:', userData);
         } catch (error) {
+            console.log('[AuthContext] No user found or error:', error);
             setUser(null);
         } finally {
             setIsLoading(false);
+            console.log('[AuthContext] checkUser() completed');
         }
     };
 
@@ -104,6 +131,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const handleSignInWithGoogle = async () => {
         console.log("Initiating Google Sign In...");
+        console.log("Current Auth Config:", JSON.stringify(authConfig, null, 2));
         try {
             // Check if user is already authenticated and sign out first if needed
             try {
@@ -120,6 +148,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             console.log("Google Sign In initiated successfully");
         } catch (error) {
             console.error("Google Sign In error:", error);
+            console.error("Error details:", JSON.stringify(error, null, 2));
             throw error;
         }
     };

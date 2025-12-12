@@ -15,6 +15,8 @@ export const TransactionSchema = z.object({
     installmentNumber: z.number().int().positive().optional(),
     date: z.date(),
     createdAt: z.date(),
+    updatedAt: z.date(),
+    deletedAt: z.date().optional().nullable(),
 });
 
 export type Transaction = z.infer<typeof TransactionSchema>;
@@ -44,6 +46,7 @@ export const createTransaction = (
         installmentNumber,
         date,
         createdAt: new Date(),
+        updatedAt: new Date(),
     };
 
     return TransactionSchema.parse(transaction);
