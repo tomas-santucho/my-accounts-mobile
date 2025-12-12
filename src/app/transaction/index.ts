@@ -1,4 +1,6 @@
-export { addTransaction } from "./addTransaction";
-export { listTransactions } from "./listTransactions";
-export { editTransaction } from "./editTransaction";
-export { deleteTransaction } from "./deleteTransaction";
+export * from "./addTransaction";
+export * from "./listTransactions";
+export * from "./editTransaction";
+export * from "./deleteTransaction";
+export * from "./deleteTransactionsByInstallmentGroup";
+export * from "./updateTransaction";

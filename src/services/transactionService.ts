@@ -27,4 +27,6 @@ export const transactionService = {
     listTransactions: () => TransactionUseCases.listTransactions(repository),
     editTransaction: (transaction: Transaction) => TransactionUseCases.editTransaction(repository, transaction),
     deleteTransaction: (id: string) => TransactionUseCases.deleteTransaction(repository, id),
+    deleteTransactionsByInstallmentGroup: (installmentGroupId: string) => TransactionUseCases.deleteTransactionsByInstallmentGroup(repository, installmentGroupId),
+    updateTransaction: (transaction: Transaction, updateStrategy?: 'single' | 'all-installments') => TransactionUseCases.updateTransaction(repository, transaction, updateStrategy),
 };

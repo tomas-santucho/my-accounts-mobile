@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import { View, StyleSheet, Animated, Text } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Logo from '../lib/Logo';
+import { categoryService } from '../../services/categoryService';
 
 interface SplashScreenProps {
     onFinish: () => void;
@@ -11,6 +13,24 @@ export default function SplashScreen({ onFinish }: SplashScreenProps) {
     const scaleAnim = new Animated.Value(0.8);
 
     useEffect(() => {
+        const initializeApp = async () => {
+            try {
+                // Check if we've already seeded categories
+                const hasSeeded = await AsyncStorage.getItem('hasSeededCategories');
+
+                if (!hasSeeded) {
+                    // Seed default categories
+                    await categoryService.seedDefaultCategories();
+                    await AsyncStorage.setItem('hasSeededCategories', 'true');
+                }
+            } catch (error) {
+                console.error('Failed to initialize app:', error);
+                // Continue anyway - don't block app startup
+            }
+        };
+
+        initializeApp();
+
         Animated.parallel([
             Animated.timing(fadeAnim, {
                 toValue: 1,

@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, StatusBar, Modal, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ScrollView, Platform, StatusBar, Modal, RefreshControl, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { transactionService } from '../../services/transactionService';
 import { Transaction } from '../../domain/transaction/transaction';
+import { Category } from '../../domain/category/category';
+import { categoryService } from '../../services/categoryService';
 import AddTransactionScreen from './AddTransactionScreen';
-import * as Sentry from '@sentry/react-native';
 import { useTheme } from '../theme';
+import FilterModal, { SortOption } from '../lib/FilterModal';
+import ConfirmDialog from '../lib/ConfirmDialog';
+import InstallmentDeleteDialog from '../lib/InstallmentDeleteDialog';
+import * as Sentry from '@sentry/react-native';
+import { convertAmount, Currency } from '../../services/currencyService';
+import { getCurrencyPreferences } from '../../config/currencyPreferences';
 
 export default function TransactionsScreen() {
     const { theme } = useTheme();
@@ -13,7 +20,46 @@ export default function TransactionsScreen() {
     const [searchQuery, setSearchQuery] = useState('');
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+    const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
     const [refreshing, setRefreshing] = useState(false);
+    const [rateType, setRateType] = useState<'blue' | 'official'>('blue');
+    const [totalIncome, setTotalIncome] = useState(0);
+    const [totalExpense, setTotalExpense] = useState(0);
+
+    // Filter states
+    const [selectedMonth, setSelectedMonth] = useState<number | null>(new Date().getMonth());
+    const [selectedYear, setSelectedYear] = useState<number | null>(new Date().getFullYear());
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [sortBy, setSortBy] = useState<SortOption>('date-desc');
+
+    // Categories
+    const [categories, setCategories] = useState<Category[]>([]);
+    const [categoryMap, setCategoryMap] = useState<Map<string, Category>>(new Map());
+
+    // Delete states
+    const [transactionToDelete, setTransactionToDelete] = useState<Transaction | null>(null);
+    const [transactionToEdit, setTransactionToEdit] = useState<Transaction | null>(null);
+    const [showConfirmDelete, setShowConfirmDelete] = useState(false);
+    const [showInstallmentDelete, setShowInstallmentDelete] = useState(false);
+
+    useEffect(() => {
+        // Load currency preferences
+        getCurrencyPreferences().then(prefs => {
+            setRateType(prefs.rateType);
+        });
+    }, []);
+
+    const fetchCategories = useCallback(async () => {
+        try {
+            const cats = await categoryService.listCategories();
+            setCategories(cats);
+            const map = new Map<string, Category>();
+            cats.forEach(c => map.set(c.id, c));
+            setCategoryMap(map);
+        } catch (error) {
+            console.error("Failed to fetch categories", error);
+        }
+    }, []);
 
     const fetchTransactions = useCallback(async () => {
         try {
@@ -29,27 +75,117 @@ export default function TransactionsScreen() {
 
     useEffect(() => {
         fetchTransactions();
-    }, [fetchTransactions]);
+        fetchCategories();
+    }, [fetchTransactions, fetchCategories]);
 
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await fetchTransactions();
+        await Promise.all([fetchTransactions(), fetchCategories()]);
         setRefreshing(false);
-    }, [fetchTransactions]);
+    }, [fetchTransactions, fetchCategories]);
 
-    // Calculate totals
-    const totalIncome = transactions
-        .filter(t => t.type === 'income' && t.currency.toUpperCase() === currency)
-        .reduce((acc, t) => acc + t.amount, 0);
+    // Apply filters, search, and sorting
+    const filteredTransactions = React.useMemo(() => {
+        let filtered = [...transactions];
 
-    const totalExpense = transactions
-        .filter(t => t.type === 'expense' && t.currency.toUpperCase() === currency)
-        .reduce((acc, t) => acc + t.amount, 0);
+        // Apply search filter
+        if (searchQuery.trim()) {
+            const query = searchQuery.toLowerCase();
+            filtered = filtered.filter(t => {
+                const categoryName = categoryMap.get(t.category)?.name || t.category;
+                return t.description.toLowerCase().includes(query) ||
+                    categoryName.toLowerCase().includes(query);
+            });
+        }
+
+        // Apply category filter
+        if (selectedCategories.length > 0) {
+            filtered = filtered.filter(t => {
+                // Match by ID
+                if (selectedCategories.includes(t.category)) return true;
+
+                // Match by Name (Legacy)
+                // Find if any selected category has a name that matches t.category
+                const transactionCategoryName = t.category.toLowerCase();
+                return selectedCategories.some(id => {
+                    const cat = categoryMap.get(id);
+                    return cat && cat.name.toLowerCase() === transactionCategoryName;
+                });
+            });
+        }
+
+        // Apply month filter
+        if (selectedMonth !== null) {
+            filtered = filtered.filter(t => {
+                const transactionDate = new Date(t.date);
+                return transactionDate.getMonth() === selectedMonth;
+            });
+        }
+
+        // Apply year filter
+        if (selectedYear !== null) {
+            filtered = filtered.filter(t => {
+                const transactionDate = new Date(t.date);
+                return transactionDate.getFullYear() === selectedYear;
+            });
+        }
+
+        // Apply sorting
+        filtered.sort((a, b) => {
+            switch (sortBy) {
+                case 'date-desc':
+                    return new Date(b.date).getTime() - new Date(a.date).getTime();
+                case 'date-asc':
+                    return new Date(a.date).getTime() - new Date(b.date).getTime();
+                case 'amount-desc':
+                    return b.amount - a.amount;
+                case 'amount-asc':
+                    return a.amount - b.amount;
+                default:
+                    return 0;
+            }
+        });
+
+        return filtered;
+    }, [transactions, searchQuery, selectedMonth, selectedYear, selectedCategories, sortBy, categoryMap]);
+
+    // Convert currency helper
+    const calculateConvertedTotal = useCallback(async (transactionsList: Transaction[]) => {
+        let total = 0;
+        const displayCurrency: Currency = currency === 'USD' ? 'usd' : 'ars';
+
+        for (const t of transactionsList) {
+            const converted = await convertAmount(
+                t.amount,
+                t.currency,
+                displayCurrency,
+                rateType
+            );
+            total += converted;
+        }
+        return total;
+    }, [currency, rateType]);
+
+    // Calculate totals from filtered transactions with conversion
+    useEffect(() => {
+        const updateTotals = async () => {
+            const incomeTransactions = filteredTransactions.filter(t => t.type === 'income');
+            const expenseTransactions = filteredTransactions.filter(t => t.type === 'expense');
+
+            const incomeTotal = await calculateConvertedTotal(incomeTransactions);
+            const expenseTotal = await calculateConvertedTotal(expenseTransactions);
+
+            setTotalIncome(incomeTotal);
+            setTotalExpense(expenseTotal);
+        };
+
+        updateTotals();
+    }, [filteredTransactions, calculateConvertedTotal]);
 
     const netBalance = totalIncome - totalExpense;
 
-    // Group transactions by date
-    const groupedTransactions = transactions.reduce((acc, transaction) => {
+    // Group filtered transactions by date
+    const groupedTransactions = filteredTransactions.reduce((acc, transaction) => {
         // Simple date formatting for grouping
         const date = new Date(transaction.date).toLocaleDateString();
         if (!acc[date]) {
@@ -64,8 +200,83 @@ export default function TransactionsScreen() {
         data: groupedTransactions[date] || []
     }));
 
-    const getIconForCategory = (category: string) => {
-        const cat = category.toLowerCase();
+    // Check if any filters are active
+    const hasActiveFilters = selectedMonth !== null || selectedYear !== null || selectedCategories.length > 0 || sortBy !== 'date-desc';
+
+    const handleApplyFilters = (filters: { month: number | null; year: number | null; categories: string[]; sortBy: SortOption }) => {
+        setSelectedMonth(filters.month);
+        setSelectedYear(filters.year);
+        setSelectedCategories(filters.categories);
+        setSortBy(filters.sortBy);
+    };
+
+    const handleResetFilters = () => {
+        setSelectedMonth(null);
+        setSelectedYear(null);
+        setSelectedCategories([]);
+        setSortBy('date-desc');
+    };
+
+    const handleDeletePress = (transaction: Transaction) => {
+        setTransactionToDelete(transaction);
+
+        // Check if this transaction is part of an installment group
+        if (transaction.installmentGroupId) {
+            setShowInstallmentDelete(true);
+        } else {
+            setShowConfirmDelete(true);
+        }
+    };
+
+    const handleDeleteSingle = async () => {
+        if (!transactionToDelete) return;
+
+        try {
+            await transactionService.deleteTransaction(transactionToDelete.id);
+            setShowConfirmDelete(false);
+            setShowInstallmentDelete(false);
+            setTransactionToDelete(null);
+            await fetchTransactions();
+        } catch (error) {
+            console.error('Error deleting transaction:', error);
+            Sentry.captureException(error);
+            Alert.alert('Error', 'Failed to delete transaction. Please try again.');
+        }
+    };
+
+    const handleDeleteAll = async () => {
+        if (!transactionToDelete?.installmentGroupId) return;
+
+        try {
+            await transactionService.deleteTransactionsByInstallmentGroup(transactionToDelete.installmentGroupId);
+            setShowInstallmentDelete(false);
+            setTransactionToDelete(null);
+            await fetchTransactions();
+        } catch (error) {
+            console.error('Error deleting installment group:', error);
+            Sentry.captureException(error);
+            Alert.alert('Error', 'Failed to delete installments. Please try again.');
+        }
+    };
+
+    const handleCancelDelete = () => {
+        setShowConfirmDelete(false);
+        setShowInstallmentDelete(false);
+        setTransactionToDelete(null);
+    };
+
+    const handleEditPress = (transaction: Transaction) => {
+        setTransactionToEdit(transaction);
+        setIsAddModalVisible(true);
+    };
+
+    const getIconForCategory = (categoryIdOrName: string) => {
+        // Check if it's an ID
+        const category = categoryMap.get(categoryIdOrName);
+        if (category) return category.icon;
+
+        // Fallback for legacy names
+        const cat = categoryIdOrName.toLowerCase();
         if (cat.includes('food') || cat.includes('grocery')) return 'nutrition-outline';
         if (cat.includes('coffee')) return 'cafe-outline';
         if (cat.includes('transport') || cat.includes('gas') || cat.includes('uber')) return 'car-outline';
@@ -87,13 +298,49 @@ export default function TransactionsScreen() {
                 onRequestClose={() => setIsAddModalVisible(false)}
             >
                 <AddTransactionScreen
-                    onClose={() => setIsAddModalVisible(false)}
+                    onClose={() => {
+                        setIsAddModalVisible(false);
+                        setTransactionToEdit(null);
+                    }}
                     onSave={() => {
                         fetchTransactions();
                         setIsAddModalVisible(false);
+                        setTransactionToEdit(null);
                     }}
+                    transaction={transactionToEdit || undefined}
                 />
             </Modal>
+
+            <FilterModal
+                visible={isFilterModalVisible}
+                onClose={() => setIsFilterModalVisible(false)}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+                selectedCategories={selectedCategories}
+                categories={categories}
+                sortBy={sortBy}
+                onApplyFilters={handleApplyFilters}
+                onResetFilters={handleResetFilters}
+            />
+
+            <ConfirmDialog
+                visible={showConfirmDelete}
+                title="Delete Transaction"
+                message="Are you sure you want to delete this transaction? This action cannot be undone."
+                confirmText="Delete"
+                cancelText="Cancel"
+                onConfirm={handleDeleteSingle}
+                onCancel={handleCancelDelete}
+                destructive
+            />
+
+            <InstallmentDeleteDialog
+                visible={showInstallmentDelete}
+                onDeleteSingle={handleDeleteSingle}
+                onDeleteAll={handleDeleteAll}
+                onCancel={handleCancelDelete}
+                installmentCount={transactionToDelete?.installments}
+            />
 
             <ScrollView
                 style={styles.scrollView}
@@ -137,8 +384,14 @@ export default function TransactionsScreen() {
                                 onChangeText={setSearchQuery}
                             />
                         </View>
-                        <TouchableOpacity style={styles.filterButton}>
+                        <TouchableOpacity
+                            style={styles.filterButton}
+                            onPress={() => setIsFilterModalVisible(true)}
+                        >
                             <Ionicons name="options-outline" size={24} color={theme.colors.onPrimary} />
+                            {hasActiveFilters && (
+                                <View style={[styles.filterBadge, { backgroundColor: theme.colors.secondary }]} />
+                            )}
                         </TouchableOpacity>
                     </View>
 
@@ -179,24 +432,36 @@ export default function TransactionsScreen() {
                                 <View style={[styles.cardList, { backgroundColor: theme.colors.cardBackground }]}>
                                     {section.data.map((item, index) => (
                                         <View key={item.id}>
-                                            <TouchableOpacity style={styles.transactionItem}>
-                                                <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>
-                                                    <Ionicons name={getIconForCategory(item.category) as any} size={24} color={theme.colors.textSecondary} />
-                                                </View>
-                                                <View style={styles.transactionInfo}>
-                                                    <Text style={[styles.transactionTitle, { color: theme.colors.textPrimary }]}>{item.description}</Text>
-                                                    <Text style={[styles.transactionSubtitle, { color: theme.colors.textSecondary }]}>
-                                                        {item.category} • {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                        {item.installments ? ` • ${item.installments} inst.` : ''}
+                                            <View style={styles.transactionItem}>
+                                                <TouchableOpacity
+                                                    style={styles.transactionContent}
+                                                    onPress={() => handleEditPress(item)}
+                                                    onLongPress={() => handleDeletePress(item)}
+                                                >
+                                                    <View style={[styles.iconContainer, { backgroundColor: theme.colors.inputBackground }]}>
+                                                        <Ionicons name={getIconForCategory(item.category) as any} size={24} color={theme.colors.textSecondary} />
+                                                    </View>
+                                                    <View style={styles.transactionInfo}>
+                                                        <Text style={[styles.transactionTitle, { color: theme.colors.textPrimary }]}>{item.description}</Text>
+                                                        <Text style={[styles.transactionSubtitle, { color: theme.colors.textSecondary }]}>
+                                                            {categoryMap.get(item.category)?.name || item.category} • {new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                            {item.installments ? ` • ${item.installmentNumber}/${item.installments}` : ''}
+                                                        </Text>
+                                                    </View>
+                                                    <Text style={[
+                                                        styles.transactionAmount,
+                                                        item.type === 'income' ? { color: theme.colors.success } : { color: theme.colors.error }
+                                                    ]}>
+                                                        {item.type === 'income' ? '+' : ''}{item.type === 'expense' ? '' : ''}${Math.abs(item.amount).toLocaleString()}
                                                     </Text>
-                                                </View>
-                                                <Text style={[
-                                                    styles.transactionAmount,
-                                                    item.type === 'income' ? { color: theme.colors.success } : { color: theme.colors.error }
-                                                ]}>
-                                                    {item.type === 'income' ? '+' : ''}{item.type === 'expense' ? '' : ''}${Math.abs(item.amount).toLocaleString()}
-                                                </Text>
-                                            </TouchableOpacity>
+                                                </TouchableOpacity>
+                                                <TouchableOpacity
+                                                    style={styles.deleteButton}
+                                                    onPress={() => handleDeletePress(item)}
+                                                >
+                                                    <Ionicons name="trash-outline" size={20} color={theme.colors.error} />
+                                                </TouchableOpacity>
+                                            </View>
                                             {index < section.data.length - 1 && <View style={[styles.itemSeparator, { backgroundColor: theme.colors.border }]} />}
                                         </View>
                                     ))}
@@ -298,6 +563,14 @@ const styles = StyleSheet.create({
         justifyContent: 'center',
         alignItems: 'center',
     },
+    filterBadge: {
+        position: 'absolute',
+        top: 8,
+        right: 8,
+        width: 8,
+        height: 8,
+        borderRadius: 4,
+    },
     addButton: {
         flexDirection: 'row',
         alignItems: 'center',
@@ -379,6 +652,15 @@ const styles = StyleSheet.create({
         flexDirection: 'row',
         alignItems: 'center',
         padding: 12,
+    },
+    transactionContent: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    deleteButton: {
+        padding: 8,
+        marginLeft: 8,
     },
     itemSeparator: {
         height: 1,

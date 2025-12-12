@@ -1,0 +1,52 @@
+import 'dotenv/config';
+
+export default {
+  "expo": {
+    "name": "my-accounts",
+    "slug": "my-accounts",
+    "scheme": "my-accounts",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.myaccounts"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.myaccounts"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "a2d05329-5930-4e7c-a64e-56507831675d"
+      },
+      "API_URL": process.env.API_URL || process.env.EXPO_PUBLIC_API_URL
+    },
+    "plugins": [
+      [
+        "@sentry/react-native/expo",
+        {
+          "url": "https://sentry.io/",
+          "project": "my-accounts",
+          "organization": "my-accounts"
+        }
+      ],
+      "expo-localization"
+    ]
+  }
+}
